@@ -1,11 +1,44 @@
-## My Project
+# Amazon Kinesis Connector for Apache Flink
 
-TODO: Fill this README out!
+This is a fork of the official Apache Flink Kinesis Connector:
+- https://github.com/apache/flink/tree/master/flink-connectors/flink-connector-kinesis
 
-Be sure to:
+This connector library adds Enhanced Fanout (EFO) support for Flink 1.8, allowing you to utilise EFO on Kinesis Data Analytics (KDA).
+EFO is already available in the official Apache Flink connector for Flink 1.12.   
 
-* Change the title in this README
-* Edit your repository description on GitHub
+## Quickstart
+
+You no longer need to build the Kinesis Connector from source. 
+Add the following dependency to your project to start using the connector.
+
+```xml
+<dependency>
+    <groupId>software.amazon.kinesis</groupId>
+    <artifactId>amazon-kinesis-connector-flink</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```  
+
+## Migration
+
+If you are migrating from the Apache Flink Kinesis Connector, you should perform the following steps:
+  
+  1. Replace the dependency in your application `pom.xml`
+  1. Migrate the prefix of packages for referenced classes
+      1. From: `org.apache.flink.streaming.connectors.kinesis`
+      1. To: `software.amazon.kinesis.connectors.flink`
+    
+For example:
+  
+  - `FlinkKinesisConsumer`
+      - From: `com.amazonaws.services.kinesisanalytics.flink.connectors.FlinkKinesisConsumer`
+      - To: `software.amazon.kinesis.connectors.flink.FlinkKinesisConsumer`
+
+## Support
+
+We will support this connector until end of Q1 2021. 
+Beyond this, we will not maintain patching or security for this repo.
+The Apache Flink Kinesis connector should be used in preference of this library once KDA supports an EFO enabled version.
 
 ## Security
 
