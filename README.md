@@ -8,7 +8,7 @@ EFO is already available in the official Apache Flink connector for Flink 1.12.
 - https://issues.apache.org/jira/browse/FLINK-17688
 - https://cwiki.apache.org/confluence/display/FLINK/FLIP-128%3A+Enhanced+Fan+Out+for+AWS+Kinesis+Consumers
 
-## Quickstart
+## Quickstart 
 
 You no longer need to build the Kinesis Connector from source. 
 Add the following dependency to your project to start using the connector.
@@ -20,6 +20,9 @@ Add the following dependency to your project to start using the connector.
     <version>1.0.0</version>
 </dependency>
 ```  
+
+Refer to the official Apache Flink documentation for more information on configuring the connector:
+- https://ci.apache.org/projects/flink/flink-docs-stable/dev/connectors/kinesis.html 
 
 ## Migration
 
@@ -48,6 +51,57 @@ We will support this connector until end of Q1 2021,
 or while KDA does not support an official EFO connector, whichever is later. 
 Beyond this, we will not maintain patching or security for this repo.
 The Apache Flink Kinesis connector should be used in preference of this library once KDA supports an EFO enabled version.
+
+## Using EFO
+
+Two additional properties are required to enabled EFO on your `FlinkKinesisConsumer`:
+- `RECORD_PUBLISHER_TYPE`: Set this parameter to EFO for your application to use an EFO consumer to access the Kinesis Data Stream data.
+- `EFO_CONSUMER_NAME`: Set this parameter to a string value that is unique among the consumers of this stream. Re-using a consumer name in the same Kinesis Data Stream will cause the previous consumer using that name to be terminated.
+
+To configure a FlinkKinesisConsumer to use EFO, add the following parameters to the consumer:
+```java
+consumerConfig.putIfAbsent(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE, "EFO");
+consumerConfig.putIfAbsent(ConsumerConfigConstants.EFO_CONSUMER_NAME, "efo-consumer");
+```
+
+Note the additional IAM permissions required to use EFO:
+
+```json
+{
+  "Sid": "AllStreams",
+  "Effect": "Allow",
+  "Action": [
+    "kinesis:ListShards",
+    "kinesis:ListStreamConsumers"
+  ],
+  "Resource": "arn:aws:kinesis:<region>:<account>:stream/*"
+},
+{
+  "Sid": "Stream",
+  "Effect": "Allow",
+  "Action": [
+    "kinesis:DescribeStream",
+    "kinesis:RegisterStreamConsumer",
+    "kinesis:DeregisterStreamConsumer"
+  ],
+  "Resource": "arn:aws:kinesis:<region>:<account>:stream/<stream-name>"
+},
+{
+  "Sid": "Consumer",
+  "Effect": "Allow",
+  "Action": [
+    "kinesis:DescribeStreamConsumer",
+    "kinesis:SubscribeToShard"
+  ],
+  "Resource": [
+    "arn:aws:kinesis:<region>:<account>:stream/<stream-name>/consumer/<consumer-name>",
+    "arn:aws:kinesis:<region>:<account>:stream/<stream-name>/consumer/<consumer-name>:*"
+  ]
+}
+```
+
+Refer to the offical Apache Flink development documentation for more information:
+- https://ci.apache.org/projects/flink/flink-docs-master/dev/connectors/kinesis.html 
 
 ## Security
 
