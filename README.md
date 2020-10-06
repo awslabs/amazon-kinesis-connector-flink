@@ -36,6 +36,12 @@ For example:
       - From: `com.amazonaws.services.kinesisanalytics.flink.connectors.FlinkKinesisConsumer`
       - To: `software.amazon.kinesis.connectors.flink.FlinkKinesisConsumer`
 
+## Flink Versions
+
+This connector is supported for Flink 1.8. 
+This connector does not support Flink 1.11+ due to a backward incompatible change in the `DeserializationSchema`.
+Other versions of Flink lower than 1.11 may work, but are not tested. 
+
 ## Support
 
 We will support this connector until end of Q1 2021, 
