@@ -43,7 +43,7 @@ For example:
 
 This connector is supported for Flink 1.8. 
 This connector does not support Flink 1.11+ due to a backward incompatible change in the `DeserializationSchema`.
-Other versions of Flink lower than 1.11 may work, but are not tested. 
+Other versions of Flink lower than 1.11 may work, but are not officially supported. 
 
 ## Support
 
@@ -54,7 +54,7 @@ The Apache Flink Kinesis connector should be used instead of this library once K
 
 ## Using EFO
 
-Two additional properties are required to enabled EFO on your `FlinkKinesisConsumer`:
+Two additional properties are required to enable EFO on your `FlinkKinesisConsumer`:
 - `RECORD_PUBLISHER_TYPE`: Set this parameter to EFO for your application to use an EFO consumer to access the Kinesis Data Stream data.
 - `EFO_CONSUMER_NAME`: Set this parameter to a string value that is unique among the consumers of this stream. Re-using a consumer name in the same Kinesis Data Stream will cause the previous consumer using that name to be terminated.
 
