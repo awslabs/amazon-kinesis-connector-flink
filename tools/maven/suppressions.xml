@@ -25,7 +25,7 @@ under the License.
 		"http://www.puppycrawl.com/dtds/suppressions_1_1.dtd">
 
 <suppressions>
-		<!-- Kinesis producer has to use guava directly -->
-		<suppress
-			files="FlinkKinesisProducer.java|FlinkKinesisProducerTest.java" checks="IllegalImport"/>
+	<!-- Kinesis producer has to use guava directly -->
+	<suppress files="FlinkKinesisProducer.java|FlinkKinesisProducerTest.java" checks="IllegalImport"/>
+	<suppress files="FanOutRecordPublisher.java|FanOutRecordPublisherTest.java" checks="IllegalImport"/>
 </suppressions>

@@ -150,12 +150,16 @@ public class FanOutRecordPublisher implements RecordPublisher {
 				return RecordPublisherRunResult.COMPLETE;
 			}
 
-			if (attempt == configuration.getSubscribeToShardMaxRetries()) {
-				throw new RuntimeException("Maximum reties exceeded for SubscribeToShard. " +
-					"Failed " + configuration.getSubscribeToShardMaxRetries() + " times.");
+			if (!(ex.getCause() instanceof io.netty.handler.timeout.ReadTimeoutException)) {
+				if (attempt == configuration.getSubscribeToShardMaxRetries()) {
+					final String errorMessage = "Maximum reties exceeded for SubscribeToShard. " +
+							"Failed " + configuration.getSubscribeToShardMaxRetries() + " times.";
+					LOG.error(errorMessage, ex.getCause());
+					throw new RuntimeException(errorMessage, ex.getCause());
+				}
+				attempt++;
 			}
 
-			attempt++;
 			backoff(ex);
 			return RecordPublisherRunResult.INCOMPLETE;
 		}
