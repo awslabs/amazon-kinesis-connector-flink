@@ -232,7 +232,7 @@ under the License.
 				<artifactId>maven-shade-plugin</artifactId>
 				<executions>
 					<execution>
-						<id>shade</id>
+						<id>shade-flink</id>
 						<phase>package</phase>
 						<goals>
 							<goal>shade</goal>
@@ -296,6 +296,12 @@ under the License.
 									<artifact>com.amazonaws:amazon-kinesis-producer</artifact>
 									<excludes>
 										<exclude>META-INF/THIRD_PARTY_NOTICES</exclude>
+									</excludes>
+								</filter>
+								<filter>
+									<artifact>software.amazon.awssdk:apache-client</artifact>
+									<excludes>
+										<exclude>META-INF/services/*</exclude>
 									</excludes>
 								</filter>
 							</filters>
