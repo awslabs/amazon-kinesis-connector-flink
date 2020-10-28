@@ -22,10 +22,7 @@ package software.amazon.kinesis.connectors.flink.proxy;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
 import software.amazon.awssdk.services.kinesis.model.DeregisterStreamConsumerRequest;
@@ -57,8 +54,6 @@ import static org.mockito.Mockito.when;
 /**
  * Test for methods in the {@link KinesisProxyV2} class.
  */
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(KinesisProxyV2.class)
 public class KinesisProxyV2Test {
 
 	private static final long EXPECTED_SUBSCRIBE_TO_SHARD_MAX = 1;
