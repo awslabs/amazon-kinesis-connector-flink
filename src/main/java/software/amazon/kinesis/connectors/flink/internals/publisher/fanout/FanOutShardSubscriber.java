@@ -217,6 +217,10 @@ public class FanOutShardSubscriber {
 			throwable.getClass().getName(), throwable.getMessage(), shardId, consumerArn, cause);
 
 		if (cause instanceof ReadTimeoutException) {
+			// ReadTimeoutException occurs naturally under backpressure scenarios when full batches take longer to
+			// process than standard read timeout (default 30s). Recoverable exceptions are intended to be retried
+			// indefinitely to avoid system degradation under backpressure. The EFO connection (subscription) to Kinesis
+			// is closed, and reacquired once the queue of records has been processed.
 			throw new RecoverableFanOutSubscriberException(cause);
 		} else {
 			throw new RetryableFanOutSubscriberException(cause);
