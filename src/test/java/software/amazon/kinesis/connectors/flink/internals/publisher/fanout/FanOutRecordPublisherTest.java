@@ -20,6 +20,7 @@
 package software.amazon.kinesis.connectors.flink.internals.publisher.fanout;
 
 import com.amazonaws.services.kinesis.clientlibrary.types.UserRecord;
+import io.netty.handler.timeout.ReadTimeoutException;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -262,10 +263,33 @@ public class FanOutRecordPublisherTest {
 
 		int count = 0;
 		while (recordPublisher.run(new TestUtils.TestConsumer()) == RecordPublisher.RecordPublisherRunResult.INCOMPLETE) {
-			if (++count > 3) {
+			if (++count > EXPECTED_SUBSCRIBE_TO_SHARD_RETRIES) {
 				break;
 			}
 		}
+	}
+
+	@Test
+	public void testSubscribeToShardIgnoresReadTimeoutInRetryPolicy() throws Exception {
+		Properties efoProperties = createEfoProperties();
+		efoProperties.setProperty(ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_RETRIES, String.valueOf(EXPECTED_SUBSCRIBE_TO_SHARD_RETRIES));
+		FanOutRecordPublisherConfiguration configuration = new FanOutRecordPublisherConfiguration(efoProperties, emptyList());
+
+		ReadTimeoutException retryableError = ReadTimeoutException.INSTANCE;
+		FakeKinesisFanOutBehavioursFactory.SubscriptionErrorKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.errorDuringSubscription(retryableError);
+		FullJitterBackoff backoff = mock(FullJitterBackoff.class);
+
+		FanOutRecordPublisher recordPublisher = new FanOutRecordPublisher(latest(), "arn", TestUtils.createDummyStreamShardHandle(), kinesis, configuration, backoff);
+
+		int count = 0;
+		while (recordPublisher.run(new TestUtils.TestConsumer()) == RecordPublisher.RecordPublisherRunResult.INCOMPLETE) {
+			if (++count > EXPECTED_SUBSCRIBE_TO_SHARD_RETRIES) {
+				break;
+			}
+		}
+
+		// No exception is thrown, but we still backoff.
+		verify(backoff, times(EXPECTED_SUBSCRIBE_TO_SHARD_RETRIES + 1)).calculateFullJitterBackoff(anyLong(), anyLong(), anyDouble(), anyInt());
 	}
 
 	@Test

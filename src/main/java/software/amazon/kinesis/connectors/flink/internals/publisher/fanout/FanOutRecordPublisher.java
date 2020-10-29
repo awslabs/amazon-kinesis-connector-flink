@@ -31,6 +31,7 @@ import software.amazon.awssdk.services.kinesis.model.SubscribeToShardEvent;
 import software.amazon.kinesis.connectors.flink.internals.publisher.RecordBatch;
 import software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher;
 import software.amazon.kinesis.connectors.flink.internals.publisher.fanout.FanOutShardSubscriber.FanOutSubscriberException;
+import software.amazon.kinesis.connectors.flink.internals.publisher.fanout.FanOutShardSubscriber.RecoverableFanOutSubscriberException;
 import software.amazon.kinesis.connectors.flink.model.SequenceNumber;
 import software.amazon.kinesis.connectors.flink.model.StartingPosition;
 import software.amazon.kinesis.connectors.flink.model.StreamShardHandle;
@@ -137,8 +138,13 @@ public class FanOutRecordPublisher implements RecordPublisher {
 
 		try {
 			complete = fanOutShardSubscriber.subscribeToShardAndConsumeRecords(
-				toSdkV2StartingPosition(nextStartingPosition), eventConsumer);
+					toSdkV2StartingPosition(nextStartingPosition), eventConsumer);
 			attempt = 0;
+		} catch (RecoverableFanOutSubscriberException ex) {
+			// Recoverable errors should be reattempted without contributing to the retry policy
+			// A recoverable error would not result in the Flink job being cancelled
+			backoff(ex);
+			return RecordPublisherRunResult.INCOMPLETE;
 		} catch (FanOutSubscriberException ex) {
 			// We have received an error from the network layer
 			// This can be due to limits being exceeded, network timeouts, etc
@@ -151,8 +157,10 @@ public class FanOutRecordPublisher implements RecordPublisher {
 			}
 
 			if (attempt == configuration.getSubscribeToShardMaxRetries()) {
-				throw new RuntimeException("Maximum reties exceeded for SubscribeToShard. " +
-					"Failed " + configuration.getSubscribeToShardMaxRetries() + " times.");
+				final String errorMessage = "Maximum reties exceeded for SubscribeToShard. " +
+						"Failed " + configuration.getSubscribeToShardMaxRetries() + " times.";
+				LOG.error(errorMessage, ex.getCause());
+				throw new RuntimeException(errorMessage, ex.getCause());
 			}
 
 			attempt++;
