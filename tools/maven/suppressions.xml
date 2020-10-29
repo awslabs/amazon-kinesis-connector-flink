@@ -27,5 +27,6 @@ under the License.
 <suppressions>
 	<!-- Kinesis producer has to use guava directly -->
 	<suppress files="FlinkKinesisProducer.java|FlinkKinesisProducerTest.java" checks="IllegalImport"/>
-	<suppress files="FanOutRecordPublisher.java|FanOutRecordPublisherTest.java" checks="IllegalImport"/>
+	<suppress files="FanOutRecordPublisherTest.java" checks="IllegalImport"/>
+	<suppress files="FanOutShardSubscriber.java|FanOutShardSubscriberTest.java" checks="IllegalImport"/>
 </suppressions>

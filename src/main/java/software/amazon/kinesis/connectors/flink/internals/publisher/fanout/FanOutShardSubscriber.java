@@ -22,6 +22,7 @@ package software.amazon.kinesis.connectors.flink.internals.publisher.fanout;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.util.Preconditions;
 
+import io.netty.handler.timeout.ReadTimeoutException;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
@@ -215,7 +216,11 @@ public class FanOutShardSubscriber {
 		LOG.warn("Error occurred on EFO subscription: {} - ({}).  {} ({})",
 			throwable.getClass().getName(), throwable.getMessage(), shardId, consumerArn, cause);
 
-		throw new FanOutSubscriberException(cause);
+		if (cause instanceof ReadTimeoutException) {
+			throw new RecoverableFanOutSubscriberException(cause);
+		} else {
+			throw new RetryableFanOutSubscriberException(cause);
+		}
 	}
 
 	/**
@@ -313,7 +318,7 @@ public class FanOutShardSubscriber {
 		@Override
 		public void onError(Throwable throwable) {
 			LOG.debug("Error occurred on EFO subscription: {} - ({}).  {} ({})",
-				throwable.getClass().getName(), throwable.getMessage(), shardId, consumerArn);
+				throwable.getClass().getName(), throwable.getMessage(), shardId, consumerArn, throwable);
 
 			// Cancel the subscription to signal the onNext to stop queuing and requesting data
 			cancelSubscription();
@@ -387,11 +392,38 @@ public class FanOutShardSubscriber {
 	/**
 	 * An exception wrapper to indicate an error has been thrown from the networking stack.
 	 */
-	static class FanOutSubscriberException extends Exception {
+	abstract static class FanOutSubscriberException extends Exception {
 
-		private static final long serialVersionUID = 2275015497000437736L;
+		private static final long serialVersionUID = -3899472233945299730L;
 
 		public FanOutSubscriberException(Throwable cause) {
+			super(cause);
+		}
+	}
+
+	/**
+	 * An exception wrapper to indicate a retryable error has been thrown from the networking stack.
+	 * Retryable errors are subject to the Subscribe to Shard retry policy.
+	 * If the configured number of retries are exceeded the application will terminate.
+	 */
+	static class RetryableFanOutSubscriberException extends FanOutSubscriberException {
+
+		private static final long serialVersionUID = -2967281117554404883L;
+
+		public RetryableFanOutSubscriberException(Throwable cause) {
+			super(cause);
+		}
+	}
+
+	/**
+	 * An exception wrapper to indicate a recoverable error has been thrown from the networking stack.
+	 * Recoverable errors are not counted in the retry policy.
+	 */
+	static class RecoverableFanOutSubscriberException extends FanOutSubscriberException {
+
+		private static final long serialVersionUID = -3223347557038294482L;
+
+		public RecoverableFanOutSubscriberException(Throwable cause) {
 			super(cause);
 		}
 	}
