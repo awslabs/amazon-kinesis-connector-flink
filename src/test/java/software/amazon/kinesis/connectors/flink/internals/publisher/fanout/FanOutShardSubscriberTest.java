@@ -59,4 +59,19 @@ public class FanOutShardSubscriberTest {
 		subscriber.subscribeToShardAndConsumeRecords(startingPosition, event -> { });
 	}
 
+	@Test
+	public void testMultipleErrorsThrownPassesFirstErrorToConsumer() throws Exception {
+		thrown.expect(FanOutShardSubscriber.FanOutSubscriberException.class);
+		thrown.expectMessage("Error 1!");
+
+		RuntimeException error1 = new RuntimeException("Error 1!");
+		RuntimeException error2 = new RuntimeException("Error 2!");
+		SubscriptionErrorKinesisV2 errorKinesisV2 = FakeKinesisFanOutBehavioursFactory.errorDuringSubscription(error1, error2);
+
+		FanOutShardSubscriber subscriber = new FanOutShardSubscriber("consumerArn", "shardId", errorKinesisV2);
+
+		StartingPosition startingPosition = StartingPosition.builder().build();
+		subscriber.subscribeToShardAndConsumeRecords(startingPosition, event -> { });
+	}
+
 }
