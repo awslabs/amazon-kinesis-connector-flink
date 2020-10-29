@@ -330,7 +330,11 @@ public class FanOutShardSubscriber {
 			// Cancel the subscription to signal the onNext to stop requesting data
 			cancelSubscription();
 
-			subscriptionErrorEvent.set(new SubscriptionErrorEvent(throwable));
+			if (subscriptionErrorEvent.get() == null) {
+				subscriptionErrorEvent.set(new SubscriptionErrorEvent(throwable));
+			} else {
+				LOG.warn("Previous error passed to consumer for processing. Ignoring subsequent exception.", throwable);
+			}
 		}
 
 		@Override
