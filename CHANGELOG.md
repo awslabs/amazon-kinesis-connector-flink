@@ -1,5 +1,9 @@
 # Changelog
 
+## Release 1.0.3 (November 6th, 2020)
+* Optimise `ShardConsumer` to clone `DersializationSchema` once per object rather than once per record
+  ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/5))
+
 ## Release 1.0.2 (October 30th, 2020)
 * Ignore `ReadTimeoutException` from `SubcribeToShard` retry policy to prevent app restarting due to high backpressure
   ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/3))
