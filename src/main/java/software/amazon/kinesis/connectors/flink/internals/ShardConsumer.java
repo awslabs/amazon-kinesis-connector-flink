@@ -31,6 +31,7 @@ import software.amazon.kinesis.connectors.flink.metrics.ShardConsumerMetricsRepo
 import software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber;
 import software.amazon.kinesis.connectors.flink.model.SequenceNumber;
 import software.amazon.kinesis.connectors.flink.model.StreamShardHandle;
+import software.amazon.kinesis.connectors.flink.serialization.KinesisDeserializationSchema;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -69,6 +70,8 @@ public class ShardConsumer<T> implements Runnable {
 
 	private final RecordPublisher recordPublisher;
 
+	private final KinesisDeserializationSchema<T> deserializer;
+
 	/**
 	 * Creates a shard consumer.
 	 *
@@ -91,6 +94,7 @@ public class ShardConsumer<T> implements Runnable {
 		this.subscribedShard = checkNotNull(subscribedShard);
 		this.shardConsumerMetricsReporter = checkNotNull(shardConsumerMetricsReporter);
 		this.lastSequenceNum = checkNotNull(lastSequenceNum);
+		this.deserializer = fetcherRef.getClonedDeserializationSchema();
 
 		checkArgument(
 			!lastSequenceNum.equals(SentinelSequenceNumber.SENTINEL_SHARD_ENDING_SEQUENCE_NUM.get()),
@@ -163,7 +167,7 @@ public class ShardConsumer<T> implements Runnable {
 
 		final T value;
 		try {
-			value = fetcherRef.getClonedDeserializationSchema().deserialize(
+			value = deserializer.deserialize(
 				dataBytes,
 				record.getPartitionKey(),
 				record.getSequenceNumber(),
