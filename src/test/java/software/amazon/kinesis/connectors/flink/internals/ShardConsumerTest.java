@@ -33,8 +33,10 @@ import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static software.amazon.kinesis.connectors.flink.internals.ShardConsumerTestUtils.fakeSequenceNumber;
 import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber.SENTINEL_AT_TIMESTAMP_SEQUENCE_NUM;
@@ -51,6 +53,21 @@ public class ShardConsumerTest {
 
 		ShardConsumerMetricsReporter metrics = assertNumberOfMessagesReceivedFromKinesis(500, kinesis, fakeSequenceNumber());
 		assertEquals(500, metrics.getMillisBehindLatest());
+	}
+
+	@Test
+	public void testTimestampStartingPositionWithEmptyShard() throws Exception {
+		Properties consumerProperties = new Properties();
+		consumerProperties.setProperty(ConsumerConfigConstants.STREAM_INITIAL_TIMESTAMP, "2020-11-11T09:14");
+		consumerProperties.setProperty(ConsumerConfigConstants.STREAM_TIMESTAMP_DATE_FORMAT, "yyyy-MM-dd'T'HH:mm");
+		SequenceNumber sequenceNumber = SENTINEL_AT_TIMESTAMP_SEQUENCE_NUM.get();
+
+		final int numberOfIterations = 3;
+		KinesisProxyInterface kinesis = spy(FakeKinesisBehavioursFactory.emptyShard(numberOfIterations));
+
+		assertNumberOfMessagesReceivedFromKinesis(0, kinesis, sequenceNumber, consumerProperties);
+		verify(kinesis).getShardIterator(any(), eq("AT_TIMESTAMP"), any());
+		verify(kinesis, times(numberOfIterations)).getRecords(any(), anyInt());
 	}
 
 	@Test
