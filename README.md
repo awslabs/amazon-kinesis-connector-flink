@@ -3,7 +3,7 @@
 This is a fork of the official Apache Flink Kinesis Connector:
 - https://github.com/apache/flink/tree/master/flink-connectors/flink-connector-kinesis
 
-This connector library adds Enhanced Fanout (EFO) support for Flink 1.8, allowing you to utilise EFO on Kinesis Data Analytics (KDA).
+This connector library adds Enhanced Fanout (EFO) support for Flink 1.8/1.11, allowing you to utilise EFO on Kinesis Data Analytics (KDA).
 EFO is already available in the official Apache Flink connector for Flink 1.12.   
 - https://issues.apache.org/jira/browse/FLINK-17688
 - https://cwiki.apache.org/confluence/display/FLINK/FLIP-128%3A+Enhanced+Fan+Out+for+AWS+Kinesis+Consumers
@@ -41,9 +41,8 @@ For example:
 
 ## Flink Versions
 
-This connector is supported for Flink 1.8. 
-This connector does not support Flink 1.11+ due to a backward incompatible change in the `DeserializationSchema`.
-Other versions of Flink lower than 1.11 may work, but are not officially supported. 
+This connector is supported for Flink 1.8 and Flink 1.11. 
+Other versions of Flink may work, but are not officially supported. 
 
 ## Support
 
