@@ -1,12 +1,16 @@
 # Amazon Kinesis Connector for Apache Flink
 
-This is a fork of the official Apache Flink Kinesis Connector:
-- https://github.com/apache/flink/tree/master/flink-connectors/flink-connector-kinesis
+This is a fork of [the official Apache Flink Kinesis Connector](https://github.com/apache/flink/tree/master/flink-connectors/flink-connector-kinesis).
 
-This connector library adds Enhanced Fanout (EFO) support for Flink 1.8/1.11, allowing you to utilise EFO on Kinesis Data Analytics (KDA).
-EFO is already available in the official Apache Flink connector for Flink 1.12.   
-- https://issues.apache.org/jira/browse/FLINK-17688
-- https://cwiki.apache.org/confluence/display/FLINK/FLIP-128%3A+Enhanced+Fan+Out+for+AWS+Kinesis+Consumers
+The fork backports the following features to older versions of Flink:
+
+  - Enhanced Fanout (EFO) support for Flink 1.8/1.11. For the original contributions see:
+    - [FLIP-128: Enhanced Fan Out for AWS Kinesis Consumers](https://cwiki.apache.org/confluence/display/FLINK/FLIP-128%3A+Enhanced+Fan+Out+for+AWS+Kinesis+Consumers)
+    - [FLINK-17688: Support consuming Kinesis' enhanced fanout for flink-connector-kinesis](https://issues.apache.org/jira/browse/FLINK-17688)
+  - Support for KDS data sources and sinks in Table API and SQL for Flink 1.11. For the original contributions see:
+    - [FLINK-18858: Kinesis Flink SQL Connector](https://issues.apache.org/jira/browse/FLINK-18858)
+
+Both features are already available in the official Apache Flink connector for Flink 1.12.
 
 ## Quickstart 
 
@@ -22,7 +26,11 @@ Add the following dependency to your project to start using the connector.
 ```  
 
 Refer to the official Apache Flink documentation for more information on configuring the connector:
-- https://ci.apache.org/projects/flink/flink-docs-stable/dev/connectors/kinesis.html 
+- [Amazon Kinesis Data Streams Connector](https://ci.apache.org/projects/flink/flink-docs-master/dev/connectors/kinesis.html)
+- [Amazon Kinesis Data Streams SQL Connector](https://ci.apache.org/projects/flink/flink-docs-master/dev/table/connectors/kinesis.html)
+
+Note that Flink 1.11 does not support [the "Available Metadata" functionality from upstream Table/SQL connector documentation](https://ci.apache.org/projects/flink/flink-docs-master/dev/table/connectors/kinesis.html#available-metadata). 
+If you want to expose KDS metadata fields in your table definitions, consider upgrading to Flink 1.12 or higher and using the KDS connector from the upstream repository.
 
 ## Migration
 
@@ -30,24 +38,23 @@ If you are migrating from the Apache Flink Kinesis Connector, you should perform
   
   1. Replace the dependency in your application `pom.xml`
   1. Migrate the prefix of packages for referenced classes
-      1. From: `org.apache.flink.streaming.connectors.kinesis`
-      1. To: `software.amazon.kinesis.connectors.flink`
+      - From: `org.apache.flink.streaming.connectors.kinesis`
+      - To: `software.amazon.kinesis.connectors.flink`
     
-For example:
-  
-  - `FlinkKinesisConsumer`
-      - From: `com.amazonaws.services.kinesisanalytics.flink.connectors.FlinkKinesisConsumer`
-      - To: `software.amazon.kinesis.connectors.flink.FlinkKinesisConsumer`
+For example
+ 
+  - `com.amazonaws.services.kinesisanalytics.flink.connectors.FlinkKinesisConsumer` becomes
+  - `software.amazon.kinesis.connectors.flink.FlinkKinesisConsumer`.
 
 ## Flink Versions
 
-This connector is supported for Flink 1.8 and Flink 1.11. 
+This connector is compatible with Flink 1.11.
+For a version of this connector that is compatible with Flink 1.8 [use the `1.x` release line](https://github.com/awslabs/amazon-kinesis-connector-flink/tree/release-1.0).
 Other versions of Flink may work, but are not officially supported. 
 
 ## Support
 
-We will support this connector until end of Q1 2021, 
-or until KDA supports an Apache Flink Kinesis connector with EFO support, whichever is later. 
+We will support this connector until end of Q1 2021, or until KDA supports an Apache Flink Kinesis connector with EFO support, whichever is later. 
 Beyond this, we will not maintain patching or security for this repo.
 The Apache Flink Kinesis connector should be used instead of this library once KDA supports an EFO enabled version.
 
@@ -99,8 +106,7 @@ Note the additional IAM permissions required to use EFO:
 }
 ```
 
-Refer to the offical Apache Flink development documentation for more information:
-- https://ci.apache.org/projects/flink/flink-docs-master/dev/connectors/kinesis.html 
+For more information refer to [the official EFO documentation for the KDS connector](https://ci.apache.org/projects/flink/flink-docs-master/dev/connectors/kinesis.html#using-enhanced-fan-out).
 
 ## Security
 

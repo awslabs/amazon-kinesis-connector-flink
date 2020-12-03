@@ -72,18 +72,19 @@ public class ConsumerConfigConstants extends AWSConfigConstants {
 	}
 
 	/**
-	 * The EFO registration type reprsents how we are going to de-/register efo consumer.
+	 * The EFO registration type reprsents how we are going to de-/register EFO consumer.
 	 */
 	public enum EFORegistrationType {
 
-		/** Delay the registration of efo consumer for taskmanager to execute.
-		 * De-register the efo consumer for taskmanager to execute when task is shut down. */
+		/** Delay the registration of EFO consumer for task manager to execute.
+		 * De-register the EFO consumer for task manager to execute when task is shut down. */
 		LAZY,
-		/** Register the efo consumer eagerly for jobmanager to execute.
-		 * De-register the efo consumer the same way as lazy does. */
+
+		/** Register the EFO consumer eagerly in job manager/client.
+		 * De-register the EFO consumer during task manager tear down. */
 		EAGER,
-		/** Do not register efo consumer programmatically.
-		 * Do not de-register either. */
+
+		/** Do not register or deregister EFO consumer. Application will supply ARN. */
 		NONE
 	}
 
