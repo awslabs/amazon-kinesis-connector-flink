@@ -58,6 +58,8 @@ public class ShardConsumer<T> implements Runnable {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ShardConsumer.class);
 
+	private final KinesisDeserializationSchema<T> deserializer;
+
 	private final int subscribedShardStateIndex;
 
 	private final KinesisDataFetcher<T> fetcherRef;
@@ -70,8 +72,6 @@ public class ShardConsumer<T> implements Runnable {
 
 	private final RecordPublisher recordPublisher;
 
-	private final KinesisDeserializationSchema<T> deserializer;
-
 	/**
 	 * Creates a shard consumer.
 	 *
@@ -81,24 +81,27 @@ public class ShardConsumer<T> implements Runnable {
 	 * @param subscribedShard the shard this consumer is subscribed to
 	 * @param lastSequenceNum the sequence number in the shard to start consuming
 	 * @param shardConsumerMetricsReporter the reporter to report metrics to
+	 * @param shardDeserializer used to deserialize incoming records
 	 */
 	public ShardConsumer(KinesisDataFetcher<T> fetcherRef,
 						RecordPublisher recordPublisher,
 						Integer subscribedShardStateIndex,
 						StreamShardHandle subscribedShard,
 						SequenceNumber lastSequenceNum,
-						ShardConsumerMetricsReporter shardConsumerMetricsReporter) {
+						ShardConsumerMetricsReporter shardConsumerMetricsReporter,
+						KinesisDeserializationSchema<T> shardDeserializer) {
 		this.fetcherRef = checkNotNull(fetcherRef);
 		this.recordPublisher = checkNotNull(recordPublisher);
 		this.subscribedShardStateIndex = checkNotNull(subscribedShardStateIndex);
 		this.subscribedShard = checkNotNull(subscribedShard);
 		this.shardConsumerMetricsReporter = checkNotNull(shardConsumerMetricsReporter);
 		this.lastSequenceNum = checkNotNull(lastSequenceNum);
-		this.deserializer = fetcherRef.getClonedDeserializationSchema();
 
 		checkArgument(
 			!lastSequenceNum.equals(SentinelSequenceNumber.SENTINEL_SHARD_ENDING_SEQUENCE_NUM.get()),
 			"Should not start a ShardConsumer if the shard has already been completely read.");
+
+		this.deserializer = shardDeserializer;
 	}
 
 	@Override

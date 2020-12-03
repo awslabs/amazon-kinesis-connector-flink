@@ -36,7 +36,6 @@ import software.amazon.awssdk.services.kinesis.model.RegisterStreamConsumerReque
 import software.amazon.awssdk.services.kinesis.model.RegisterStreamConsumerResponse;
 import software.amazon.awssdk.services.kinesis.model.SubscribeToShardRequest;
 import software.amazon.awssdk.services.kinesis.model.SubscribeToShardResponseHandler;
-import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants;
 import software.amazon.kinesis.connectors.flink.internals.publisher.fanout.FanOutRecordPublisherConfiguration;
 
 import java.util.Properties;
@@ -50,6 +49,25 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DEREGISTER_STREAM_BACKOFF_BASE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DEREGISTER_STREAM_BACKOFF_EXPONENTIAL_CONSTANT;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DEREGISTER_STREAM_BACKOFF_MAX;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DESCRIBE_STREAM_CONSUMER_BACKOFF_BASE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DESCRIBE_STREAM_CONSUMER_BACKOFF_EXPONENTIAL_CONSTANT;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DESCRIBE_STREAM_CONSUMER_BACKOFF_MAX;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_CONSUMER_NAME;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RECORD_PUBLISHER_TYPE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.REGISTER_STREAM_BACKOFF_BASE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.REGISTER_STREAM_BACKOFF_EXPONENTIAL_CONSTANT;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.REGISTER_STREAM_BACKOFF_MAX;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RecordPublisherType.EFO;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.STREAM_DESCRIBE_BACKOFF_BASE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.STREAM_DESCRIBE_BACKOFF_EXPONENTIAL_CONSTANT;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.STREAM_DESCRIBE_BACKOFF_MAX;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.STREAM_DESCRIBE_RETRIES;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_BACKOFF_BASE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_BACKOFF_EXPONENTIAL_CONSTANT;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_BACKOFF_MAX;
 
 /**
  * Test for methods in the {@link KinesisProxyV2} class.
@@ -311,24 +329,24 @@ public class KinesisProxyV2Test {
 
 	private Properties createEfoProperties() {
 		Properties config = new Properties();
-		config.setProperty(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE, ConsumerConfigConstants.RecordPublisherType.EFO.name());
-		config.setProperty(ConsumerConfigConstants.EFO_CONSUMER_NAME, "dummy-efo-consumer");
-		config.setProperty(ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_BACKOFF_BASE, String.valueOf(EXPECTED_SUBSCRIBE_TO_SHARD_BASE));
-		config.setProperty(ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_BACKOFF_MAX, String.valueOf(EXPECTED_SUBSCRIBE_TO_SHARD_MAX));
-		config.setProperty(ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_BACKOFF_EXPONENTIAL_CONSTANT, String.valueOf(EXPECTED_SUBSCRIBE_TO_SHARD_POW));
-		config.setProperty(ConsumerConfigConstants.REGISTER_STREAM_BACKOFF_BASE, String.valueOf(EXPECTED_REGISTRATION_BASE));
-		config.setProperty(ConsumerConfigConstants.REGISTER_STREAM_BACKOFF_MAX, String.valueOf(EXPECTED_REGISTRATION_MAX));
-		config.setProperty(ConsumerConfigConstants.REGISTER_STREAM_BACKOFF_EXPONENTIAL_CONSTANT, String.valueOf(EXPECTED_REGISTRATION_POW));
-		config.setProperty(ConsumerConfigConstants.DEREGISTER_STREAM_BACKOFF_BASE, String.valueOf(EXPECTED_DEREGISTRATION_BASE));
-		config.setProperty(ConsumerConfigConstants.DEREGISTER_STREAM_BACKOFF_MAX, String.valueOf(EXPECTED_DEREGISTRATION_MAX));
-		config.setProperty(ConsumerConfigConstants.DEREGISTER_STREAM_BACKOFF_EXPONENTIAL_CONSTANT, String.valueOf(EXPECTED_DEREGISTRATION_POW));
-		config.setProperty(ConsumerConfigConstants.DESCRIBE_STREAM_CONSUMER_BACKOFF_BASE, String.valueOf(EXPECTED_DESCRIBE_CONSUMER_BASE));
-		config.setProperty(ConsumerConfigConstants.DESCRIBE_STREAM_CONSUMER_BACKOFF_MAX, String.valueOf(EXPECTED_DESCRIBE_CONSUMER_MAX));
-		config.setProperty(ConsumerConfigConstants.DESCRIBE_STREAM_CONSUMER_BACKOFF_EXPONENTIAL_CONSTANT, String.valueOf(EXPECTED_DESCRIBE_CONSUMER_POW));
-		config.setProperty(ConsumerConfigConstants.STREAM_DESCRIBE_BACKOFF_BASE, String.valueOf(EXPECTED_DESCRIBE_STREAM_BASE));
-		config.setProperty(ConsumerConfigConstants.STREAM_DESCRIBE_BACKOFF_MAX, String.valueOf(EXPECTED_DESCRIBE_STREAM_MAX));
-		config.setProperty(ConsumerConfigConstants.STREAM_DESCRIBE_BACKOFF_EXPONENTIAL_CONSTANT, String.valueOf(EXPECTED_DESCRIBE_STREAM_POW));
-		config.setProperty(ConsumerConfigConstants.STREAM_DESCRIBE_RETRIES, String.valueOf(EXPECTED_DESCRIBE_STREAM_RETRIES));
+		config.setProperty(RECORD_PUBLISHER_TYPE, EFO.name());
+		config.setProperty(EFO_CONSUMER_NAME, "dummy-efo-consumer");
+		config.setProperty(SUBSCRIBE_TO_SHARD_BACKOFF_BASE, String.valueOf(EXPECTED_SUBSCRIBE_TO_SHARD_BASE));
+		config.setProperty(SUBSCRIBE_TO_SHARD_BACKOFF_MAX, String.valueOf(EXPECTED_SUBSCRIBE_TO_SHARD_MAX));
+		config.setProperty(SUBSCRIBE_TO_SHARD_BACKOFF_EXPONENTIAL_CONSTANT, String.valueOf(EXPECTED_SUBSCRIBE_TO_SHARD_POW));
+		config.setProperty(REGISTER_STREAM_BACKOFF_BASE, String.valueOf(EXPECTED_REGISTRATION_BASE));
+		config.setProperty(REGISTER_STREAM_BACKOFF_MAX, String.valueOf(EXPECTED_REGISTRATION_MAX));
+		config.setProperty(REGISTER_STREAM_BACKOFF_EXPONENTIAL_CONSTANT, String.valueOf(EXPECTED_REGISTRATION_POW));
+		config.setProperty(DEREGISTER_STREAM_BACKOFF_BASE, String.valueOf(EXPECTED_DEREGISTRATION_BASE));
+		config.setProperty(DEREGISTER_STREAM_BACKOFF_MAX, String.valueOf(EXPECTED_DEREGISTRATION_MAX));
+		config.setProperty(DEREGISTER_STREAM_BACKOFF_EXPONENTIAL_CONSTANT, String.valueOf(EXPECTED_DEREGISTRATION_POW));
+		config.setProperty(DESCRIBE_STREAM_CONSUMER_BACKOFF_BASE, String.valueOf(EXPECTED_DESCRIBE_CONSUMER_BASE));
+		config.setProperty(DESCRIBE_STREAM_CONSUMER_BACKOFF_MAX, String.valueOf(EXPECTED_DESCRIBE_CONSUMER_MAX));
+		config.setProperty(DESCRIBE_STREAM_CONSUMER_BACKOFF_EXPONENTIAL_CONSTANT, String.valueOf(EXPECTED_DESCRIBE_CONSUMER_POW));
+		config.setProperty(STREAM_DESCRIBE_BACKOFF_BASE, String.valueOf(EXPECTED_DESCRIBE_STREAM_BASE));
+		config.setProperty(STREAM_DESCRIBE_BACKOFF_MAX, String.valueOf(EXPECTED_DESCRIBE_STREAM_MAX));
+		config.setProperty(STREAM_DESCRIBE_BACKOFF_EXPONENTIAL_CONSTANT, String.valueOf(EXPECTED_DESCRIBE_STREAM_POW));
+		config.setProperty(STREAM_DESCRIBE_RETRIES, String.valueOf(EXPECTED_DESCRIBE_STREAM_RETRIES));
 		return config;
 	}
 

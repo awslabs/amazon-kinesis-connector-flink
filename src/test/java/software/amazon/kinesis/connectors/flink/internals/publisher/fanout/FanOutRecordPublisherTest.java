@@ -22,7 +22,6 @@ package software.amazon.kinesis.connectors.flink.internals.publisher.fanout;
 import com.amazonaws.services.kinesis.clientlibrary.types.UserRecord;
 import io.netty.handler.timeout.ReadTimeoutException;
 import org.hamcrest.Matchers;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -31,16 +30,16 @@ import software.amazon.awssdk.services.kinesis.model.LimitExceededException;
 import software.amazon.awssdk.services.kinesis.model.Record;
 import software.amazon.awssdk.services.kinesis.model.ResourceNotFoundException;
 import software.amazon.awssdk.services.kinesis.model.SubscribeToShardEvent;
-import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants;
 import software.amazon.kinesis.connectors.flink.internals.publisher.RecordBatch;
 import software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher;
-import software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber;
 import software.amazon.kinesis.connectors.flink.model.SequenceNumber;
 import software.amazon.kinesis.connectors.flink.model.StartingPosition;
 import software.amazon.kinesis.connectors.flink.proxy.FullJitterBackoff;
 import software.amazon.kinesis.connectors.flink.proxy.KinesisProxyV2Interface;
 import software.amazon.kinesis.connectors.flink.testutils.FakeKinesisFanOutBehavioursFactory;
-import software.amazon.kinesis.connectors.flink.testutils.TestUtils;
+import software.amazon.kinesis.connectors.flink.testutils.FakeKinesisFanOutBehavioursFactory.SingleShardFanOutKinesisV2;
+import software.amazon.kinesis.connectors.flink.testutils.FakeKinesisFanOutBehavioursFactory.SubscriptionErrorKinesisV2;
+import software.amazon.kinesis.connectors.flink.testutils.TestUtils.TestConsumer;
 
 import java.nio.ByteBuffer;
 import java.util.Date;
@@ -67,6 +66,21 @@ import static software.amazon.awssdk.services.kinesis.model.ShardIteratorType.AT
 import static software.amazon.awssdk.services.kinesis.model.ShardIteratorType.AT_TIMESTAMP;
 import static software.amazon.awssdk.services.kinesis.model.ShardIteratorType.LATEST;
 import static software.amazon.awssdk.services.kinesis.model.ShardIteratorType.TRIM_HORIZON;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_CONSUMER_NAME;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RECORD_PUBLISHER_TYPE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RecordPublisherType.EFO;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_BACKOFF_BASE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_BACKOFF_EXPONENTIAL_CONSTANT;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_BACKOFF_MAX;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_RETRIES;
+import static software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher.RecordPublisherRunResult.COMPLETE;
+import static software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher.RecordPublisherRunResult.INCOMPLETE;
+import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber.SENTINEL_EARLIEST_SEQUENCE_NUM;
+import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber.SENTINEL_LATEST_SEQUENCE_NUM;
+import static software.amazon.kinesis.connectors.flink.testutils.FakeKinesisFanOutBehavioursFactory.SubscriptionErrorKinesisV2.NUMBER_OF_SUBSCRIPTIONS;
+import static software.amazon.kinesis.connectors.flink.testutils.FakeKinesisFanOutBehavioursFactory.emptyShard;
+import static software.amazon.kinesis.connectors.flink.testutils.FakeKinesisFanOutBehavioursFactory.singletonShard;
+import static software.amazon.kinesis.connectors.flink.testutils.TestUtils.createDummyStreamShardHandle;
 
 /**
  * Tests for {@link FanOutRecordPublisher}.
@@ -89,10 +103,10 @@ public class FanOutRecordPublisherTest {
 
 	@Test
 	public void testToSdkV2StartingPositionAfterSequenceNumber() throws Exception {
-		FakeKinesisFanOutBehavioursFactory.SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.emptyShard();
+		SingleShardFanOutKinesisV2 kinesis = emptyShard();
 
 		RecordPublisher publisher = createRecordPublisher(kinesis, StartingPosition.continueFromSequenceNumber(SEQUENCE_NUMBER));
-		publisher.run(new TestUtils.TestConsumer());
+		publisher.run(new TestConsumer());
 
 		assertEquals(DUMMY_SEQUENCE, kinesis.getStartingPositionForSubscription(0).sequenceNumber());
 		assertEquals(AFTER_SEQUENCE_NUMBER, kinesis.getStartingPositionForSubscription(0).type());
@@ -100,10 +114,10 @@ public class FanOutRecordPublisherTest {
 
 	@Test
 	public void testToSdkV2StartingPositionAtSequenceNumber() throws Exception {
-		FakeKinesisFanOutBehavioursFactory.SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.emptyShard();
+		SingleShardFanOutKinesisV2 kinesis = emptyShard();
 
 		RecordPublisher publisher = createRecordPublisher(kinesis, StartingPosition.restartFromSequenceNumber(AGGREGATED_SEQUENCE_NUMBER));
-		publisher.run(new TestUtils.TestConsumer());
+		publisher.run(new TestConsumer());
 
 		assertEquals(DUMMY_SEQUENCE, kinesis.getStartingPositionForSubscription(0).sequenceNumber());
 		assertEquals(AT_SEQUENCE_NUMBER, kinesis.getStartingPositionForSubscription(0).type());
@@ -111,10 +125,10 @@ public class FanOutRecordPublisherTest {
 
 	@Test
 	public void testToSdkV2StartingPositionLatest() throws Exception {
-		FakeKinesisFanOutBehavioursFactory.SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.emptyShard();
+		SingleShardFanOutKinesisV2 kinesis = emptyShard();
 
 		RecordPublisher publisher = createRecordPublisher(kinesis, latest());
-		publisher.run(new TestUtils.TestConsumer());
+		publisher.run(new TestConsumer());
 
 		assertNull(kinesis.getStartingPositionForSubscription(0).sequenceNumber());
 		assertEquals(LATEST, kinesis.getStartingPositionForSubscription(0).type());
@@ -122,10 +136,10 @@ public class FanOutRecordPublisherTest {
 
 	@Test
 	public void testToSdkV2StartingPositionTrimHorizon() throws Exception {
-		FakeKinesisFanOutBehavioursFactory.SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.emptyShard();
+		SingleShardFanOutKinesisV2 kinesis = emptyShard();
 
-		RecordPublisher publisher = createRecordPublisher(kinesis, StartingPosition.continueFromSequenceNumber(SentinelSequenceNumber.SENTINEL_EARLIEST_SEQUENCE_NUM.get()));
-		publisher.run(new TestUtils.TestConsumer());
+		RecordPublisher publisher = createRecordPublisher(kinesis, StartingPosition.continueFromSequenceNumber(SENTINEL_EARLIEST_SEQUENCE_NUM.get()));
+		publisher.run(new TestConsumer());
 
 		assertNull(kinesis.getStartingPositionForSubscription(0).sequenceNumber());
 		assertEquals(TRIM_HORIZON, kinesis.getStartingPositionForSubscription(0).type());
@@ -133,11 +147,11 @@ public class FanOutRecordPublisherTest {
 
 	@Test
 	public void testToSdkV2StartingPositionAtTimeStamp() throws Exception {
-		FakeKinesisFanOutBehavioursFactory.SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.emptyShard();
+		SingleShardFanOutKinesisV2 kinesis = emptyShard();
 		Date now = new Date();
 
 		RecordPublisher publisher = createRecordPublisher(kinesis, StartingPosition.fromTimestamp(now));
-		publisher.run(new TestUtils.TestConsumer());
+		publisher.run(new TestConsumer());
 
 		assertEquals(now.toInstant(), kinesis.getStartingPositionForSubscription(0).timestamp());
 		assertEquals(AT_TIMESTAMP, kinesis.getStartingPositionForSubscription(0).type());
@@ -156,10 +170,10 @@ public class FanOutRecordPublisherTest {
 			.data(SdkBytes.fromByteArray(data))
 			.build();
 
-		KinesisProxyV2Interface kinesis = FakeKinesisFanOutBehavioursFactory.singletonShard(createSubscribeToShardEvent(record));
+		KinesisProxyV2Interface kinesis = singletonShard(createSubscribeToShardEvent(record));
 		RecordPublisher publisher = createRecordPublisher(kinesis, latest());
 
-		TestUtils.TestConsumer consumer = new TestUtils.TestConsumer();
+		TestConsumer consumer = new TestConsumer();
 		publisher.run(consumer);
 
 		UserRecord actual = consumer.getRecordBatches().get(0).getDeaggregatedRecords().get(0);
@@ -175,7 +189,7 @@ public class FanOutRecordPublisherTest {
 		thrown.expect(RuntimeException.class);
 		thrown.expectMessage("An error thrown from the consumer");
 
-		FakeKinesisFanOutBehavioursFactory.SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.boundedShard().build();
+		SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.boundedShard().build();
 		RecordPublisher recordPublisher = createRecordPublisher(kinesis);
 
 		recordPublisher.run(batch -> {
@@ -190,17 +204,17 @@ public class FanOutRecordPublisherTest {
 		KinesisProxyV2Interface kinesis = FakeKinesisFanOutBehavioursFactory.resourceNotFoundWhenObtainingSubscription();
 		RecordPublisher recordPublisher = createRecordPublisher(kinesis);
 
-		recordPublisher.run(new TestUtils.TestConsumer());
+		recordPublisher.run(new TestConsumer());
 	}
 
 	@Test
 	public void testShardConsumerCompletesIfResourceNotFoundExceptionThrownFromSubscription() throws Exception {
 		ResourceNotFoundException exception = ResourceNotFoundException.builder().build();
-		FakeKinesisFanOutBehavioursFactory.SubscriptionErrorKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.errorDuringSubscription(exception);
+		SubscriptionErrorKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.errorDuringSubscription(exception);
 		RecordPublisher recordPublisher = createRecordPublisher(kinesis);
-		TestUtils.TestConsumer consumer = new TestUtils.TestConsumer();
+		TestConsumer consumer = new TestConsumer();
 
-		Assert.assertEquals(RecordPublisher.RecordPublisherRunResult.COMPLETE, recordPublisher.run(consumer));
+		assertEquals(COMPLETE, recordPublisher.run(consumer));
 
 		// Will exit on the first subscription
 		assertEquals(1, kinesis.getNumberOfSubscribeToShardInvocations());
@@ -209,32 +223,32 @@ public class FanOutRecordPublisherTest {
 	@Test
 	public void testShardConsumerRetriesIfLimitExceededExceptionThrownFromSubscription() throws Exception {
 		LimitExceededException exception = LimitExceededException.builder().build();
-		FakeKinesisFanOutBehavioursFactory.SubscriptionErrorKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.errorDuringSubscription(exception);
+		SubscriptionErrorKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.errorDuringSubscription(exception);
 		RecordPublisher recordPublisher = createRecordPublisher(kinesis);
-		TestUtils.TestConsumer consumer = new TestUtils.TestConsumer();
+		TestConsumer consumer = new TestConsumer();
 
 		int count = 0;
-		while (recordPublisher.run(consumer) == RecordPublisher.RecordPublisherRunResult.INCOMPLETE) {
-			if (++count > FakeKinesisFanOutBehavioursFactory.SubscriptionErrorKinesisV2.NUMBER_OF_SUBSCRIPTIONS + 1) {
+		while (recordPublisher.run(consumer) == INCOMPLETE) {
+			if (++count > NUMBER_OF_SUBSCRIPTIONS + 1) {
 				break;
 			}
 		}
 
 		// An exception is thrown on the 5th subscription and then the subscription completes on the next
-		Assert.assertEquals(FakeKinesisFanOutBehavioursFactory.SubscriptionErrorKinesisV2.NUMBER_OF_SUBSCRIPTIONS + 1, kinesis.getNumberOfSubscribeToShardInvocations());
+		assertEquals(NUMBER_OF_SUBSCRIPTIONS + 1, kinesis.getNumberOfSubscribeToShardInvocations());
 	}
 
 	@Test
 	public void testSubscribeToShardBacksOffForRetryableError() throws Exception {
 		LimitExceededException retryableError = LimitExceededException.builder().build();
-		FakeKinesisFanOutBehavioursFactory.SubscriptionErrorKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.errorDuringSubscription(retryableError);
+		SubscriptionErrorKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.errorDuringSubscription(retryableError);
 		FanOutRecordPublisherConfiguration configuration = createConfiguration();
 
 		FullJitterBackoff backoff = mock(FullJitterBackoff.class);
 		when(backoff.calculateFullJitterBackoff(anyLong(), anyLong(), anyDouble(), anyInt())).thenReturn(100L);
 
-		new FanOutRecordPublisher(latest(), "arn", TestUtils.createDummyStreamShardHandle(), kinesis, configuration, backoff)
-			.run(new TestUtils.TestConsumer());
+		new FanOutRecordPublisher(latest(), "arn", createDummyStreamShardHandle(), kinesis, configuration, backoff)
+			.run(new TestConsumer());
 
 		verify(backoff).calculateFullJitterBackoff(
 			EXPECTED_SUBSCRIBE_TO_SHARD_BASE,
@@ -252,17 +266,17 @@ public class FanOutRecordPublisherTest {
 		thrown.expectMessage("Maximum reties exceeded for SubscribeToShard. Failed 3 times.");
 
 		Properties efoProperties = createEfoProperties();
-		efoProperties.setProperty(ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_RETRIES, String.valueOf(EXPECTED_SUBSCRIBE_TO_SHARD_RETRIES));
+		efoProperties.setProperty(SUBSCRIBE_TO_SHARD_RETRIES, String.valueOf(EXPECTED_SUBSCRIBE_TO_SHARD_RETRIES));
 		FanOutRecordPublisherConfiguration configuration = new FanOutRecordPublisherConfiguration(efoProperties, emptyList());
 
 		LimitExceededException retryableError = LimitExceededException.builder().build();
-		FakeKinesisFanOutBehavioursFactory.SubscriptionErrorKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.errorDuringSubscription(retryableError);
+		SubscriptionErrorKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.errorDuringSubscription(retryableError);
 		FullJitterBackoff backoff = mock(FullJitterBackoff.class);
 
-		FanOutRecordPublisher recordPublisher = new FanOutRecordPublisher(latest(), "arn", TestUtils.createDummyStreamShardHandle(), kinesis, configuration, backoff);
+		FanOutRecordPublisher recordPublisher = new FanOutRecordPublisher(latest(), "arn", createDummyStreamShardHandle(), kinesis, configuration, backoff);
 
 		int count = 0;
-		while (recordPublisher.run(new TestUtils.TestConsumer()) == RecordPublisher.RecordPublisherRunResult.INCOMPLETE) {
+		while (recordPublisher.run(new TestConsumer()) == INCOMPLETE) {
 			if (++count > EXPECTED_SUBSCRIBE_TO_SHARD_RETRIES) {
 				break;
 			}
@@ -272,17 +286,17 @@ public class FanOutRecordPublisherTest {
 	@Test
 	public void testSubscribeToShardIgnoresReadTimeoutInRetryPolicy() throws Exception {
 		Properties efoProperties = createEfoProperties();
-		efoProperties.setProperty(ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_RETRIES, String.valueOf(EXPECTED_SUBSCRIBE_TO_SHARD_RETRIES));
+		efoProperties.setProperty(SUBSCRIBE_TO_SHARD_RETRIES, String.valueOf(EXPECTED_SUBSCRIBE_TO_SHARD_RETRIES));
 		FanOutRecordPublisherConfiguration configuration = new FanOutRecordPublisherConfiguration(efoProperties, emptyList());
 
 		ReadTimeoutException retryableError = ReadTimeoutException.INSTANCE;
 		FakeKinesisFanOutBehavioursFactory.SubscriptionErrorKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.errorDuringSubscription(retryableError);
 		FullJitterBackoff backoff = mock(FullJitterBackoff.class);
 
-		FanOutRecordPublisher recordPublisher = new FanOutRecordPublisher(latest(), "arn", TestUtils.createDummyStreamShardHandle(), kinesis, configuration, backoff);
+		FanOutRecordPublisher recordPublisher = new FanOutRecordPublisher(latest(), "arn", createDummyStreamShardHandle(), kinesis, configuration, backoff);
 
 		int count = 0;
-		while (recordPublisher.run(new TestUtils.TestConsumer()) == RecordPublisher.RecordPublisherRunResult.INCOMPLETE) {
+		while (recordPublisher.run(new TestConsumer()) == RecordPublisher.RecordPublisherRunResult.INCOMPLETE) {
 			if (++count > EXPECTED_SUBSCRIBE_TO_SHARD_RETRIES) {
 				break;
 			}
@@ -295,16 +309,16 @@ public class FanOutRecordPublisherTest {
 	@Test
 	public void testSubscribeToShardBacksOffAttemptIncreases() throws Exception {
 		LimitExceededException retryableError = LimitExceededException.builder().build();
-		FakeKinesisFanOutBehavioursFactory.SubscriptionErrorKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.errorDuringSubscription(retryableError);
+		SubscriptionErrorKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.errorDuringSubscription(retryableError);
 		FanOutRecordPublisherConfiguration configuration = createConfiguration();
 
 		FullJitterBackoff backoff = mock(FullJitterBackoff.class);
 
-		FanOutRecordPublisher recordPublisher = new FanOutRecordPublisher(latest(), "arn", TestUtils.createDummyStreamShardHandle(), kinesis, configuration, backoff);
+		FanOutRecordPublisher recordPublisher = new FanOutRecordPublisher(latest(), "arn", createDummyStreamShardHandle(), kinesis, configuration, backoff);
 
-		recordPublisher.run(new TestUtils.TestConsumer());
-		recordPublisher.run(new TestUtils.TestConsumer());
-		recordPublisher.run(new TestUtils.TestConsumer());
+		recordPublisher.run(new TestConsumer());
+		recordPublisher.run(new TestConsumer());
+		recordPublisher.run(new TestConsumer());
 
 		verify(backoff).calculateFullJitterBackoff(anyLong(), anyLong(), anyDouble(), eq(1));
 		verify(backoff).calculateFullJitterBackoff(anyLong(), anyLong(), anyDouble(), eq(2));
@@ -316,16 +330,16 @@ public class FanOutRecordPublisherTest {
 
 	@Test
 	public void testBackOffAttemptResetsWithSuccessfulSubscription() throws Exception {
-		FakeKinesisFanOutBehavioursFactory.SubscriptionErrorKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.alternatingSuccessErrorDuringSubscription();
+		SubscriptionErrorKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.alternatingSuccessErrorDuringSubscription();
 		FanOutRecordPublisherConfiguration configuration = createConfiguration();
 
 		FullJitterBackoff backoff = mock(FullJitterBackoff.class);
 
-		FanOutRecordPublisher recordPublisher = new FanOutRecordPublisher(latest(), "arn", TestUtils.createDummyStreamShardHandle(), kinesis, configuration, backoff);
+		FanOutRecordPublisher recordPublisher = new FanOutRecordPublisher(latest(), "arn", createDummyStreamShardHandle(), kinesis, configuration, backoff);
 
-		recordPublisher.run(new TestUtils.TestConsumer());
-		recordPublisher.run(new TestUtils.TestConsumer());
-		recordPublisher.run(new TestUtils.TestConsumer());
+		recordPublisher.run(new TestConsumer());
+		recordPublisher.run(new TestConsumer());
+		recordPublisher.run(new TestConsumer());
 
 		// Expecting:
 		// - first attempt to fail, and backoff attempt #1
@@ -340,7 +354,7 @@ public class FanOutRecordPublisherTest {
 
 	@Test
 	public void testRecordDurability() throws Exception {
-		FakeKinesisFanOutBehavioursFactory.SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory
+		SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory
 			.boundedShard()
 			.withBatchCount(10)
 			.withBatchesPerSubscription(3)
@@ -348,10 +362,10 @@ public class FanOutRecordPublisherTest {
 			.build();
 
 		RecordPublisher recordPublisher = createRecordPublisher(kinesis);
-		TestUtils.TestConsumer consumer = new TestUtils.TestConsumer();
+		TestConsumer consumer = new TestConsumer();
 
 		int count = 0;
-		while (recordPublisher.run(consumer) == RecordPublisher.RecordPublisherRunResult.INCOMPLETE) {
+		while (recordPublisher.run(consumer) == INCOMPLETE) {
 			if (++count > 4) {
 				break;
 			}
@@ -370,7 +384,7 @@ public class FanOutRecordPublisherTest {
 
 	@Test
 	public void testAggregatedRecordDurability() throws Exception {
-		FakeKinesisFanOutBehavioursFactory.SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory
+		SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory
 			.boundedShard()
 			.withBatchCount(10)
 			.withAggregationFactor(5)
@@ -378,10 +392,10 @@ public class FanOutRecordPublisherTest {
 			.build();
 
 		RecordPublisher recordPublisher = createRecordPublisher(kinesis);
-		TestUtils.TestConsumer consumer = new TestUtils.TestConsumer();
+		TestConsumer consumer = new TestConsumer();
 
 		int count = 0;
-		while (recordPublisher.run(consumer) == RecordPublisher.RecordPublisherRunResult.INCOMPLETE) {
+		while (recordPublisher.run(consumer) == INCOMPLETE) {
 			if (++count > 5) {
 				break;
 			}
@@ -423,7 +437,7 @@ public class FanOutRecordPublisherTest {
 	}
 
 	private RecordPublisher createRecordPublisher(final KinesisProxyV2Interface kinesis, final StartingPosition startingPosition) {
-		return new FanOutRecordPublisher(startingPosition, "arn", TestUtils.createDummyStreamShardHandle(), kinesis, createConfiguration(), new FullJitterBackoff());
+		return new FanOutRecordPublisher(startingPosition, "arn", createDummyStreamShardHandle(), kinesis, createConfiguration(), new FullJitterBackoff());
 	}
 
 	private FanOutRecordPublisherConfiguration createConfiguration() {
@@ -432,11 +446,11 @@ public class FanOutRecordPublisherTest {
 
 	private Properties createEfoProperties() {
 		Properties config = new Properties();
-		config.setProperty(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE, ConsumerConfigConstants.RecordPublisherType.EFO.name());
-		config.setProperty(ConsumerConfigConstants.EFO_CONSUMER_NAME, "dummy-efo-consumer");
-		config.setProperty(ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_BACKOFF_BASE, String.valueOf(EXPECTED_SUBSCRIBE_TO_SHARD_BASE));
-		config.setProperty(ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_BACKOFF_MAX, String.valueOf(EXPECTED_SUBSCRIBE_TO_SHARD_MAX));
-		config.setProperty(ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_BACKOFF_EXPONENTIAL_CONSTANT, String.valueOf(EXPECTED_SUBSCRIBE_TO_SHARD_POW));
+		config.setProperty(RECORD_PUBLISHER_TYPE, EFO.name());
+		config.setProperty(EFO_CONSUMER_NAME, "dummy-efo-consumer");
+		config.setProperty(SUBSCRIBE_TO_SHARD_BACKOFF_BASE, String.valueOf(EXPECTED_SUBSCRIBE_TO_SHARD_BASE));
+		config.setProperty(SUBSCRIBE_TO_SHARD_BACKOFF_MAX, String.valueOf(EXPECTED_SUBSCRIBE_TO_SHARD_MAX));
+		config.setProperty(SUBSCRIBE_TO_SHARD_BACKOFF_EXPONENTIAL_CONSTANT, String.valueOf(EXPECTED_SUBSCRIBE_TO_SHARD_POW));
 		return config;
 	}
 
@@ -448,7 +462,7 @@ public class FanOutRecordPublisherTest {
 	}
 
 	private StartingPosition latest() {
-		return StartingPosition.continueFromSequenceNumber(SentinelSequenceNumber.SENTINEL_LATEST_SEQUENCE_NUM.get());
+		return StartingPosition.continueFromSequenceNumber(SENTINEL_LATEST_SEQUENCE_NUM.get());
 	}
 
 }

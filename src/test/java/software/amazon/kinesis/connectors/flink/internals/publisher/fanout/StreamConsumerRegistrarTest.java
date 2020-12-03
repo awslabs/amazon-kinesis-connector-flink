@@ -19,16 +19,15 @@
 
 package software.amazon.kinesis.connectors.flink.internals.publisher.fanout;
 
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import software.amazon.awssdk.services.kinesis.model.ResourceNotFoundException;
-import software.amazon.kinesis.connectors.flink.FlinkKinesisException;
-import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants;
+import software.amazon.kinesis.connectors.flink.FlinkKinesisException.FlinkKinesisTimeoutException;
 import software.amazon.kinesis.connectors.flink.proxy.FullJitterBackoff;
 import software.amazon.kinesis.connectors.flink.proxy.KinesisProxyV2Interface;
 import software.amazon.kinesis.connectors.flink.testutils.FakeKinesisFanOutBehavioursFactory;
+import software.amazon.kinesis.connectors.flink.testutils.FakeKinesisFanOutBehavioursFactory.StreamConsumerFakeKinesis;
 
 import java.util.Properties;
 
@@ -45,6 +44,23 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DEREGISTER_STREAM_BACKOFF_BASE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DEREGISTER_STREAM_BACKOFF_EXPONENTIAL_CONSTANT;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DEREGISTER_STREAM_BACKOFF_MAX;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DEREGISTER_STREAM_TIMEOUT_SECONDS;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFORegistrationType.LAZY;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_CONSUMER_NAME;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_REGISTRATION_TYPE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RECORD_PUBLISHER_TYPE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.REGISTER_STREAM_BACKOFF_BASE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.REGISTER_STREAM_BACKOFF_EXPONENTIAL_CONSTANT;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.REGISTER_STREAM_BACKOFF_MAX;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.REGISTER_STREAM_TIMEOUT_SECONDS;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RecordPublisherType.EFO;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.efoConsumerArn;
+import static software.amazon.kinesis.connectors.flink.testutils.FakeKinesisFanOutBehavioursFactory.STREAM_CONSUMER_ARN_EXISTING;
+import static software.amazon.kinesis.connectors.flink.testutils.FakeKinesisFanOutBehavioursFactory.STREAM_CONSUMER_ARN_NEW;
+import static software.amazon.kinesis.connectors.flink.testutils.FakeKinesisFanOutBehavioursFactory.StreamConsumerFakeKinesis.NUMBER_OF_DESCRIBE_REQUESTS_TO_ACTIVATE;
 
 /**
  * Tests for {@link StreamConsumerRegistrar}.
@@ -83,7 +99,7 @@ public class StreamConsumerRegistrarTest {
 
 		String result = registrar.registerStreamConsumer(STREAM, "name");
 
-		Assert.assertEquals(FakeKinesisFanOutBehavioursFactory.STREAM_CONSUMER_ARN_NEW, result);
+		assertEquals(STREAM_CONSUMER_ARN_NEW, result);
 	}
 
 	@Test
@@ -96,39 +112,39 @@ public class StreamConsumerRegistrarTest {
 		String result = registrar.registerStreamConsumer(STREAM, "name");
 
 		verify(backoff, never()).sleep(anyLong());
-		Assert.assertEquals(FakeKinesisFanOutBehavioursFactory.STREAM_CONSUMER_ARN_EXISTING, result);
+		assertEquals(STREAM_CONSUMER_ARN_EXISTING, result);
 	}
 
 	@Test
 	public void testRegisterStreamConsumerWaitsForConsumerToBecomeActive() throws Exception {
 		FullJitterBackoff backoff = mock(FullJitterBackoff.class);
 
-		FakeKinesisFanOutBehavioursFactory.StreamConsumerFakeKinesis kinesis = FakeKinesisFanOutBehavioursFactory.registerExistingConsumerAndWaitToBecomeActive();
+		StreamConsumerFakeKinesis kinesis = FakeKinesisFanOutBehavioursFactory.registerExistingConsumerAndWaitToBecomeActive();
 		StreamConsumerRegistrar registrar = createRegistrar(kinesis, backoff);
 
 		String result = registrar.registerStreamConsumer(STREAM, "name");
 
 		// we backoff on each retry
-		verify(backoff, times(FakeKinesisFanOutBehavioursFactory.StreamConsumerFakeKinesis.NUMBER_OF_DESCRIBE_REQUESTS_TO_ACTIVATE - 1)).sleep(anyLong());
-		Assert.assertEquals(FakeKinesisFanOutBehavioursFactory.STREAM_CONSUMER_ARN_EXISTING, result);
+		verify(backoff, times(NUMBER_OF_DESCRIBE_REQUESTS_TO_ACTIVATE - 1)).sleep(anyLong());
+		assertEquals(STREAM_CONSUMER_ARN_EXISTING, result);
 
 		// We will invoke describe stream until the stream consumer is activated
-		Assert.assertEquals(FakeKinesisFanOutBehavioursFactory.StreamConsumerFakeKinesis.NUMBER_OF_DESCRIBE_REQUESTS_TO_ACTIVATE, kinesis.getNumberOfDescribeStreamConsumerInvocations());
+		assertEquals(NUMBER_OF_DESCRIBE_REQUESTS_TO_ACTIVATE, kinesis.getNumberOfDescribeStreamConsumerInvocations());
 
-		for (int i = 1; i < FakeKinesisFanOutBehavioursFactory.StreamConsumerFakeKinesis.NUMBER_OF_DESCRIBE_REQUESTS_TO_ACTIVATE; i++) {
+		for (int i = 1; i < NUMBER_OF_DESCRIBE_REQUESTS_TO_ACTIVATE; i++) {
 			verify(backoff).calculateFullJitterBackoff(anyLong(), anyLong(), anyDouble(), eq(i));
 		}
 	}
 
 	@Test
 	public void testRegisterStreamConsumerTimeoutWaitingForConsumerToBecomeActive() throws Exception {
-		thrown.expect(FlinkKinesisException.FlinkKinesisTimeoutException.class);
+		thrown.expect(FlinkKinesisTimeoutException.class);
 		thrown.expectMessage("Timeout waiting for stream consumer to become active: name on stream-arn");
 
-		FakeKinesisFanOutBehavioursFactory.StreamConsumerFakeKinesis kinesis = FakeKinesisFanOutBehavioursFactory.registerExistingConsumerAndWaitToBecomeActive();
+		StreamConsumerFakeKinesis kinesis = FakeKinesisFanOutBehavioursFactory.registerExistingConsumerAndWaitToBecomeActive();
 
 		Properties configProps = createEfoProperties();
-		configProps.setProperty(ConsumerConfigConstants.REGISTER_STREAM_TIMEOUT_SECONDS, "1");
+		configProps.setProperty(REGISTER_STREAM_TIMEOUT_SECONDS, "1");
 
 		FanOutRecordPublisherConfiguration configuration = new FanOutRecordPublisherConfiguration(configProps, singletonList(STREAM));
 		StreamConsumerRegistrar registrar = new StreamConsumerRegistrar(kinesis, configuration, backoffFor(1001));
@@ -143,7 +159,7 @@ public class StreamConsumerRegistrarTest {
 		KinesisProxyV2Interface kinesis = FakeKinesisFanOutBehavioursFactory.existingActiveConsumer();
 
 		Properties efoProperties = createEfoProperties();
-		efoProperties.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, ConsumerConfigConstants.EFORegistrationType.LAZY.name());
+		efoProperties.setProperty(EFO_REGISTRATION_TYPE, LAZY.name());
 
 		FanOutRecordPublisherConfiguration configuration = new FanOutRecordPublisherConfiguration(efoProperties, emptyList());
 		StreamConsumerRegistrar registrar = new StreamConsumerRegistrar(kinesis, configuration, backoff);
@@ -151,14 +167,14 @@ public class StreamConsumerRegistrarTest {
 		String result = registrar.registerStreamConsumer(STREAM, "name");
 
 		verify(backoff).sleep(anyLong());
-		Assert.assertEquals(FakeKinesisFanOutBehavioursFactory.STREAM_CONSUMER_ARN_EXISTING, result);
+		assertEquals(STREAM_CONSUMER_ARN_EXISTING, result);
 	}
 
 	@Test
 	public void testDeregisterStreamConsumerAndWaitForDeletingStatus() throws Exception {
 		FullJitterBackoff backoff = mock(FullJitterBackoff.class);
 
-		FakeKinesisFanOutBehavioursFactory.StreamConsumerFakeKinesis kinesis = FakeKinesisFanOutBehavioursFactory.existingActiveConsumer();
+		StreamConsumerFakeKinesis kinesis = FakeKinesisFanOutBehavioursFactory.existingActiveConsumer();
 		StreamConsumerRegistrar registrar = createRegistrar(kinesis, backoff);
 
 		registrar.deregisterStreamConsumer(STREAM);
@@ -173,13 +189,13 @@ public class StreamConsumerRegistrarTest {
 
 	@Test
 	public void testDeregisterStreamConsumerTimeoutWaitingForConsumerToDeregister() throws Exception {
-		thrown.expect(FlinkKinesisException.FlinkKinesisTimeoutException.class);
+		thrown.expect(FlinkKinesisTimeoutException.class);
 		thrown.expectMessage("Timeout waiting for stream consumer to deregister: stream-consumer-arn");
 
-		FakeKinesisFanOutBehavioursFactory.StreamConsumerFakeKinesis kinesis = FakeKinesisFanOutBehavioursFactory.existingActiveConsumer();
+		StreamConsumerFakeKinesis kinesis = FakeKinesisFanOutBehavioursFactory.existingActiveConsumer();
 
 		Properties configProps = createEfoProperties();
-		configProps.setProperty(ConsumerConfigConstants.DEREGISTER_STREAM_TIMEOUT_SECONDS, "1");
+		configProps.setProperty(DEREGISTER_STREAM_TIMEOUT_SECONDS, "1");
 
 		FanOutRecordPublisherConfiguration configuration = new FanOutRecordPublisherConfiguration(configProps, singletonList(STREAM));
 		StreamConsumerRegistrar registrar = new StreamConsumerRegistrar(kinesis, configuration, backoffFor(1001));
@@ -191,7 +207,7 @@ public class StreamConsumerRegistrarTest {
 	public void testDeregisterStreamConsumerNotFound() throws Exception {
 		FullJitterBackoff backoff = mock(FullJitterBackoff.class);
 
-		FakeKinesisFanOutBehavioursFactory.StreamConsumerFakeKinesis kinesis = FakeKinesisFanOutBehavioursFactory.streamConsumerNotFound();
+		StreamConsumerFakeKinesis kinesis = FakeKinesisFanOutBehavioursFactory.streamConsumerNotFound();
 		StreamConsumerRegistrar registrar = createRegistrar(kinesis, backoff);
 
 		registrar.deregisterStreamConsumer(STREAM);
@@ -206,7 +222,7 @@ public class StreamConsumerRegistrarTest {
 
 		FullJitterBackoff backoff = mock(FullJitterBackoff.class);
 
-		FakeKinesisFanOutBehavioursFactory.StreamConsumerFakeKinesis kinesis = FakeKinesisFanOutBehavioursFactory.streamConsumerNotFound();
+		StreamConsumerFakeKinesis kinesis = FakeKinesisFanOutBehavioursFactory.streamConsumerNotFound();
 		StreamConsumerRegistrar registrar = createRegistrar(kinesis, backoff);
 
 		registrar.deregisterStreamConsumer("not-found");
@@ -273,15 +289,15 @@ public class StreamConsumerRegistrarTest {
 
 	private Properties createEfoProperties() {
 		Properties config = new Properties();
-		config.setProperty(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE, ConsumerConfigConstants.RecordPublisherType.EFO.name());
-		config.setProperty(ConsumerConfigConstants.EFO_CONSUMER_NAME, "dummy-efo-consumer");
-		config.setProperty(ConsumerConfigConstants.REGISTER_STREAM_BACKOFF_BASE, String.valueOf(EXPECTED_REGISTRATION_BASE));
-		config.setProperty(ConsumerConfigConstants.REGISTER_STREAM_BACKOFF_MAX, String.valueOf(EXPECTED_REGISTRATION_MAX));
-		config.setProperty(ConsumerConfigConstants.REGISTER_STREAM_BACKOFF_EXPONENTIAL_CONSTANT, String.valueOf(EXPECTED_REGISTRATION_POW));
-		config.setProperty(ConsumerConfigConstants.DEREGISTER_STREAM_BACKOFF_BASE, String.valueOf(EXPECTED_DEREGISTRATION_BASE));
-		config.setProperty(ConsumerConfigConstants.DEREGISTER_STREAM_BACKOFF_MAX, String.valueOf(EXPECTED_DEREGISTRATION_MAX));
-		config.setProperty(ConsumerConfigConstants.DEREGISTER_STREAM_BACKOFF_EXPONENTIAL_CONSTANT, String.valueOf(EXPECTED_DEREGISTRATION_POW));
-		config.setProperty(ConsumerConfigConstants.efoConsumerArn(STREAM), "stream-consumer-arn");
+		config.setProperty(RECORD_PUBLISHER_TYPE, EFO.name());
+		config.setProperty(EFO_CONSUMER_NAME, "dummy-efo-consumer");
+		config.setProperty(REGISTER_STREAM_BACKOFF_BASE, String.valueOf(EXPECTED_REGISTRATION_BASE));
+		config.setProperty(REGISTER_STREAM_BACKOFF_MAX, String.valueOf(EXPECTED_REGISTRATION_MAX));
+		config.setProperty(REGISTER_STREAM_BACKOFF_EXPONENTIAL_CONSTANT, String.valueOf(EXPECTED_REGISTRATION_POW));
+		config.setProperty(DEREGISTER_STREAM_BACKOFF_BASE, String.valueOf(EXPECTED_DEREGISTRATION_BASE));
+		config.setProperty(DEREGISTER_STREAM_BACKOFF_MAX, String.valueOf(EXPECTED_DEREGISTRATION_MAX));
+		config.setProperty(DEREGISTER_STREAM_BACKOFF_EXPONENTIAL_CONSTANT, String.valueOf(EXPECTED_DEREGISTRATION_POW));
+		config.setProperty(efoConsumerArn(STREAM), "stream-consumer-arn");
 		return config;
 	}
 

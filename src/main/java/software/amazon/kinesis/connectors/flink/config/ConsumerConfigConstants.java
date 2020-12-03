@@ -26,6 +26,8 @@ import software.amazon.kinesis.connectors.flink.FlinkKinesisConsumer;
 import software.amazon.kinesis.connectors.flink.internals.ShardConsumer;
 import software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber;
 
+import java.time.Duration;
+
 /**
  * Optional consumer specific configuration keys and default values for {@link FlinkKinesisConsumer}.
  */
@@ -70,19 +72,18 @@ public class ConsumerConfigConstants extends AWSConfigConstants {
 	}
 
 	/**
-	 * The EFO registration type reprsents how we are going to de-/register EFO consumer.
+	 * The EFO registration type reprsents how we are going to de-/register efo consumer.
 	 */
 	public enum EFORegistrationType {
 
-		/** Delay the registration of EFO consumer for task manager to execute.
-		 * De-register the EFO consumer for task manager to execute when task is shut down. */
+		/** Delay the registration of efo consumer for taskmanager to execute.
+		 * De-register the efo consumer for taskmanager to execute when task is shut down. */
 		LAZY,
-
-		/** Register the EFO consumer eagerly in job manager/client.
-		 * De-register the EFO consumer during task manager tear down. */
+		/** Register the efo consumer eagerly for jobmanager to execute.
+		 * De-register the efo consumer the same way as lazy does. */
 		EAGER,
-
-		/** Do not register or deregister EFO consumer. Application will supply ARN. */
+		/** Do not register efo consumer programmatically.
+		 * Do not de-register either. */
 		NONE
 	}
 
@@ -269,7 +270,7 @@ public class ConsumerConfigConstants extends AWSConfigConstants {
 
 	public static final int DEFAULT_REGISTER_STREAM_RETRIES = 10;
 
-	public static final long DEFAULT_REGISTER_STREAM_TIMEOUT_SECONDS = 60;
+	public static final Duration DEFAULT_REGISTER_STREAM_TIMEOUT = Duration.ofSeconds(60);
 
 	public static final long DEFAULT_REGISTER_STREAM_BACKOFF_BASE = 500L;
 
@@ -279,7 +280,7 @@ public class ConsumerConfigConstants extends AWSConfigConstants {
 
 	public static final int DEFAULT_DEREGISTER_STREAM_RETRIES = 10;
 
-	public static final long DEFAULT_DEREGISTER_STREAM_TIMEOUT_SECONDS = 60;
+	public static final Duration DEFAULT_DEREGISTER_STREAM_TIMEOUT = Duration.ofSeconds(60);
 
 	public static final long DEFAULT_DEREGISTER_STREAM_BACKOFF_BASE = 500L;
 

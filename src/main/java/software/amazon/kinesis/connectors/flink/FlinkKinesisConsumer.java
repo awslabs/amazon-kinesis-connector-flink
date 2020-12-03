@@ -21,6 +21,7 @@ package software.amazon.kinesis.connectors.flink;
 
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.api.common.state.ListState;
@@ -41,6 +42,7 @@ import org.apache.flink.util.InstantiationUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants;
+import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.InitialPosition;
 import software.amazon.kinesis.connectors.flink.internals.KinesisDataFetcher;
 import software.amazon.kinesis.connectors.flink.model.KinesisStreamShardState;
 import software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber;
@@ -242,7 +244,7 @@ public class FlinkKinesisConsumer<T> extends RichParallelSourceFunction<T> imple
 	 */
 	public void setShardAssigner(KinesisShardAssigner shardAssigner) {
 		this.shardAssigner = checkNotNull(shardAssigner, "function can not be null");
-		ClosureCleaner.clean(shardAssigner, true);
+		ClosureCleaner.clean(shardAssigner, ExecutionConfig.ClosureCleanerLevel.RECURSIVE, true);
 	}
 
 	public AssignerWithPeriodicWatermarks<T> getPeriodicWatermarkAssigner() {
@@ -257,7 +259,7 @@ public class FlinkKinesisConsumer<T> extends RichParallelSourceFunction<T> imple
 	public void setPeriodicWatermarkAssigner(
 		AssignerWithPeriodicWatermarks<T> periodicWatermarkAssigner) {
 		this.periodicWatermarkAssigner = periodicWatermarkAssigner;
-		ClosureCleaner.clean(this.periodicWatermarkAssigner, true);
+		ClosureCleaner.clean(this.periodicWatermarkAssigner, ExecutionConfig.ClosureCleanerLevel.RECURSIVE, true);
 	}
 
 	public WatermarkTracker getWatermarkTracker() {
@@ -271,7 +273,7 @@ public class FlinkKinesisConsumer<T> extends RichParallelSourceFunction<T> imple
 	 */
 	public void setWatermarkTracker(WatermarkTracker watermarkTracker) {
 		this.watermarkTracker = watermarkTracker;
-		ClosureCleaner.clean(this.watermarkTracker, true);
+		ClosureCleaner.clean(this.watermarkTracker, ExecutionConfig.ClosureCleanerLevel.RECURSIVE, true);
 	}
 
 	// ------------------------------------------------------------------------
@@ -320,7 +322,7 @@ public class FlinkKinesisConsumer<T> extends RichParallelSourceFunction<T> imple
 			} else {
 				// we're starting fresh; use the configured start position as initial state
 				SentinelSequenceNumber startingSeqNum =
-					ConsumerConfigConstants.InitialPosition.valueOf(configProps.getProperty(
+					InitialPosition.valueOf(configProps.getProperty(
 						ConsumerConfigConstants.STREAM_INITIAL_POSITION,
 						ConsumerConfigConstants.DEFAULT_STREAM_INITIAL_POSITION)).toSentinelSequenceNumber();
 

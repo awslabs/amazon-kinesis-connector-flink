@@ -38,6 +38,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.SHARD_USE_ADAPTIVE_READS;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.STREAM_INITIAL_TIMESTAMP;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.STREAM_TIMESTAMP_DATE_FORMAT;
 import static software.amazon.kinesis.connectors.flink.internals.ShardConsumerTestUtils.fakeSequenceNumber;
 import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber.SENTINEL_AT_TIMESTAMP_SEQUENCE_NUM;
 import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber.SENTINEL_EARLIEST_SEQUENCE_NUM;
@@ -85,8 +88,8 @@ public class ShardConsumerTest {
 		Date expectedTimestamp = new SimpleDateFormat(format).parse(timestamp);
 
 		Properties consumerProperties = new Properties();
-		consumerProperties.setProperty(ConsumerConfigConstants.STREAM_INITIAL_TIMESTAMP, timestamp);
-		consumerProperties.setProperty(ConsumerConfigConstants.STREAM_TIMESTAMP_DATE_FORMAT, format);
+		consumerProperties.setProperty(STREAM_INITIAL_TIMESTAMP, timestamp);
+		consumerProperties.setProperty(STREAM_TIMESTAMP_DATE_FORMAT, format);
 		SequenceNumber sequenceNumber = SENTINEL_AT_TIMESTAMP_SEQUENCE_NUM.get();
 
 		KinesisProxyInterface kinesis = spy(FakeKinesisBehavioursFactory.totalNumOfRecordsAfterNumOfGetRecordsCalls(10, 1, 0));
@@ -117,7 +120,7 @@ public class ShardConsumerTest {
 	@Test
 	public void testCorrectNumOfCollectedRecordsAndUpdatedStateWithAdaptiveReads() throws Exception {
 		Properties consumerProperties = new Properties();
-		consumerProperties.setProperty(ConsumerConfigConstants.SHARD_USE_ADAPTIVE_READS, "true");
+		consumerProperties.setProperty(SHARD_USE_ADAPTIVE_READS, "true");
 
 		KinesisProxyInterface kinesis = FakeKinesisBehavioursFactory.initialNumOfRecordsAfterNumOfGetRecordsCallsWithAdaptiveReads(10, 2, 500L);
 

@@ -40,6 +40,10 @@ import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DEFAULT_STREAM_TIMESTAMP_DATE_FORMAT;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_HTTP_CLIENT_MAX_CONCURRENCY;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.STREAM_INITIAL_TIMESTAMP;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.STREAM_TIMESTAMP_DATE_FORMAT;
 
 /**
  * Tests for KinesisConfigUtil.
@@ -212,6 +216,7 @@ public class KinesisConfigUtilTest {
 	// ----------------------------------------------------------------------
 	// validateEfoConfiguration() tests
 	// ----------------------------------------------------------------------
+
 	@Test
 	public void testNoEfoRegistrationTypeInConfig() {
 		Properties testConfig = TestUtils.getStandardProperties();
@@ -284,7 +289,7 @@ public class KinesisConfigUtilTest {
 	@Test
 	public void testValidateEfoMaxConcurrency() {
 		Properties testConfig = TestUtils.getStandardProperties();
-		testConfig.setProperty(ConsumerConfigConstants.EFO_HTTP_CLIENT_MAX_CONCURRENCY, "55");
+		testConfig.setProperty(EFO_HTTP_CLIENT_MAX_CONCURRENCY, "55");
 
 		KinesisConfigUtil.validateConsumerConfiguration(testConfig);
 	}
@@ -295,7 +300,7 @@ public class KinesisConfigUtilTest {
 		exception.expectMessage("Invalid value given for EFO HTTP client max concurrency. Must be positive.");
 
 		Properties testConfig = TestUtils.getStandardProperties();
-		testConfig.setProperty(ConsumerConfigConstants.EFO_HTTP_CLIENT_MAX_CONCURRENCY, "abc");
+		testConfig.setProperty(EFO_HTTP_CLIENT_MAX_CONCURRENCY, "abc");
 
 		KinesisConfigUtil.validateConsumerConfiguration(testConfig);
 	}
@@ -306,7 +311,7 @@ public class KinesisConfigUtilTest {
 		exception.expectMessage("Invalid value given for EFO HTTP client max concurrency. Must be positive.");
 
 		Properties testConfig = TestUtils.getStandardProperties();
-		testConfig.setProperty(ConsumerConfigConstants.EFO_HTTP_CLIENT_MAX_CONCURRENCY, "-1");
+		testConfig.setProperty(EFO_HTTP_CLIENT_MAX_CONCURRENCY, "-1");
 
 		KinesisConfigUtil.validateConsumerConfiguration(testConfig);
 	}
@@ -642,6 +647,52 @@ public class KinesisConfigUtilTest {
 	}
 
 	@Test
+	public void testParseStreamTimestampStartingPositionUsingDefaultFormat() throws Exception {
+		String timestamp = "2020-08-13T09:18:00.0+01:00";
+		Date expectedTimestamp = new SimpleDateFormat(DEFAULT_STREAM_TIMESTAMP_DATE_FORMAT).parse(timestamp);
+
+		Properties consumerProperties = new Properties();
+		consumerProperties.setProperty(STREAM_INITIAL_TIMESTAMP, timestamp);
+
+		Date actualimestamp = KinesisConfigUtil.parseStreamTimestampStartingPosition(consumerProperties);
+
+		assertEquals(expectedTimestamp, actualimestamp);
+	}
+
+	@Test
+	public void testParseStreamTimestampStartingPositionUsingCustomFormat() throws Exception {
+		String format = "yyyy-MM-dd'T'HH:mm";
+		String timestamp = "2020-08-13T09:23";
+		Date expectedTimestamp = new SimpleDateFormat(format).parse(timestamp);
+
+		Properties consumerProperties = new Properties();
+		consumerProperties.setProperty(STREAM_INITIAL_TIMESTAMP, timestamp);
+		consumerProperties.setProperty(STREAM_TIMESTAMP_DATE_FORMAT, format);
+
+		Date actualimestamp = KinesisConfigUtil.parseStreamTimestampStartingPosition(consumerProperties);
+
+		assertEquals(expectedTimestamp, actualimestamp);
+	}
+
+	@Test
+	public void testParseStreamTimestampStartingPositionUsingParseError() {
+		exception.expect(NumberFormatException.class);
+
+		Properties consumerProperties = new Properties();
+		consumerProperties.setProperty(STREAM_INITIAL_TIMESTAMP, "bad");
+
+		KinesisConfigUtil.parseStreamTimestampStartingPosition(consumerProperties);
+	}
+
+	@Test
+	public void testParseStreamTimestampStartingPositionIllegalArgumentException() {
+		exception.expect(IllegalArgumentException.class);
+
+		Properties consumerProperties = new Properties();
+
+		KinesisConfigUtil.parseStreamTimestampStartingPosition(consumerProperties);
+	}
+
 	public void testUnparsableIntForRegisterStreamRetriesInConfig() {
 		exception.expect(IllegalArgumentException.class);
 		exception.expectMessage("Invalid value given for maximum retry attempts for register stream operation");
@@ -838,52 +889,4 @@ public class KinesisConfigUtilTest {
 
 		KinesisConfigUtil.validateConsumerConfiguration(testConfig);
 	}
-
-	@Test
-	public void testParseStreamTimestampStartingPositionUsingDefaultFormat() throws Exception {
-		String timestamp = "2020-08-13T09:18:00.0+01:00";
-		Date expectedTimestamp = new SimpleDateFormat(ConsumerConfigConstants.DEFAULT_STREAM_TIMESTAMP_DATE_FORMAT).parse(timestamp);
-
-		Properties consumerProperties = new Properties();
-		consumerProperties.setProperty(ConsumerConfigConstants.STREAM_INITIAL_TIMESTAMP, timestamp);
-
-		Date actualimestamp = KinesisConfigUtil.parseStreamTimestampStartingPosition(consumerProperties);
-
-		assertEquals(expectedTimestamp, actualimestamp);
-	}
-
-	@Test
-	public void testParseStreamTimestampStartingPositionUsingCustomFormat() throws Exception {
-		String format = "yyyy-MM-dd'T'HH:mm";
-		String timestamp = "2020-08-13T09:23";
-		Date expectedTimestamp = new SimpleDateFormat(format).parse(timestamp);
-
-		Properties consumerProperties = new Properties();
-		consumerProperties.setProperty(ConsumerConfigConstants.STREAM_INITIAL_TIMESTAMP, timestamp);
-		consumerProperties.setProperty(ConsumerConfigConstants.STREAM_TIMESTAMP_DATE_FORMAT, format);
-
-		Date actualimestamp = KinesisConfigUtil.parseStreamTimestampStartingPosition(consumerProperties);
-
-		assertEquals(expectedTimestamp, actualimestamp);
-	}
-
-	@Test
-	public void testParseStreamTimestampStartingPositionUsingParseError() {
-		exception.expect(NumberFormatException.class);
-
-		Properties consumerProperties = new Properties();
-		consumerProperties.setProperty(ConsumerConfigConstants.STREAM_INITIAL_TIMESTAMP, "bad");
-
-		KinesisConfigUtil.parseStreamTimestampStartingPosition(consumerProperties);
-	}
-
-	@Test
-	public void testParseStreamTimestampStartingPositionIllegalArgumentException() {
-		exception.expect(IllegalArgumentException.class);
-
-		Properties consumerProperties = new Properties();
-
-		KinesisConfigUtil.parseStreamTimestampStartingPosition(consumerProperties);
-	}
-
 }

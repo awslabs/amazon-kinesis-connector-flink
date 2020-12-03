@@ -27,7 +27,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants;
+import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RecordPublisherType;
 import software.amazon.kinesis.connectors.flink.testutils.TestUtils;
 
 import java.time.Duration;
@@ -41,6 +41,14 @@ import java.util.Optional;
 import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DEREGISTER_STREAM_TIMEOUT_SECONDS;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFORegistrationType.NONE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_CONSUMER_ARN_PREFIX;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_CONSUMER_NAME;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_REGISTRATION_TYPE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RECORD_PUBLISHER_TYPE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.REGISTER_STREAM_TIMEOUT_SECONDS;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RecordPublisherType.EFO;
 
 /**
  * Tests for {@link FanOutRecordPublisherConfiguration}.
@@ -57,7 +65,7 @@ public class FanOutRecordPublisherConfigurationTest extends TestLogger {
 		exception.expectMessage("Only efo record publisher can register a FanOutProperties.");
 
 		Properties testConfig = TestUtils.getStandardProperties();
-		testConfig.setProperty(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE, ConsumerConfigConstants.RecordPublisherType.POLLING.toString());
+		testConfig.setProperty(RECORD_PUBLISHER_TYPE, RecordPublisherType.POLLING.toString());
 
 		new FanOutRecordPublisherConfiguration(testConfig, new ArrayList<>());
 	}
@@ -66,21 +74,21 @@ public class FanOutRecordPublisherConfigurationTest extends TestLogger {
 	public void testEagerStrategyWithConsumerName() {
 		String fakedConsumerName = "fakedconsumername";
 		Properties testConfig = TestUtils.getStandardProperties();
-		testConfig.setProperty(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE, ConsumerConfigConstants.RecordPublisherType.EFO.toString());
-		testConfig.setProperty(ConsumerConfigConstants.EFO_CONSUMER_NAME, fakedConsumerName);
+		testConfig.setProperty(RECORD_PUBLISHER_TYPE, EFO.toString());
+		testConfig.setProperty(EFO_CONSUMER_NAME, fakedConsumerName);
 		FanOutRecordPublisherConfiguration fanOutRecordPublisherConfiguration = new FanOutRecordPublisherConfiguration(testConfig, new ArrayList<>());
 		assertEquals(fanOutRecordPublisherConfiguration.getConsumerName(), Optional.of(fakedConsumerName));
 	}
 
 	@Test
 	public void testEagerStrategyWithNoConsumerName() {
-		String msg = "No valid enhanced fan-out consumer name is set through " + ConsumerConfigConstants.EFO_CONSUMER_NAME;
+		String msg = "No valid enhanced fan-out consumer name is set through " + EFO_CONSUMER_NAME;
 
 		exception.expect(IllegalArgumentException.class);
 		exception.expectMessage(msg);
 
 		Properties testConfig = TestUtils.getStandardProperties();
-		testConfig.setProperty(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE, ConsumerConfigConstants.RecordPublisherType.EFO.toString());
+		testConfig.setProperty(RECORD_PUBLISHER_TYPE, EFO.toString());
 		new FanOutRecordPublisherConfiguration(testConfig, new ArrayList<>());
 	}
 
@@ -88,11 +96,11 @@ public class FanOutRecordPublisherConfigurationTest extends TestLogger {
 	public void testNoneStrategyWithStreams() {
 		List<String> streams = Arrays.asList("fakedstream1", "fakedstream2");
 		Properties testConfig = TestUtils.getStandardProperties();
-		testConfig.setProperty(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE, ConsumerConfigConstants.RecordPublisherType.EFO.toString());
-		testConfig.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, ConsumerConfigConstants.EFORegistrationType.NONE.toString());
+		testConfig.setProperty(RECORD_PUBLISHER_TYPE, EFO.toString());
+		testConfig.setProperty(EFO_REGISTRATION_TYPE, NONE.toString());
 		streams.forEach(
 			stream ->
-				testConfig.setProperty(ConsumerConfigConstants.EFO_CONSUMER_ARN_PREFIX + "." + stream, stream)
+				testConfig.setProperty(EFO_CONSUMER_ARN_PREFIX + "." + stream, stream)
 		);
 		FanOutRecordPublisherConfiguration fanOutRecordPublisherConfiguration = new FanOutRecordPublisherConfiguration(testConfig, streams);
 		Map<String, String> expectedStreamArns = new HashMap<>();
@@ -111,8 +119,8 @@ public class FanOutRecordPublisherConfigurationTest extends TestLogger {
 		exception.expectMessage(msg);
 
 		Properties testConfig = TestUtils.getStandardProperties();
-		testConfig.setProperty(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE, ConsumerConfigConstants.RecordPublisherType.EFO.toString());
-		testConfig.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, ConsumerConfigConstants.EFORegistrationType.NONE.toString());
+		testConfig.setProperty(RECORD_PUBLISHER_TYPE, EFO.toString());
+		testConfig.setProperty(EFO_REGISTRATION_TYPE, NONE.toString());
 
 		new FanOutRecordPublisherConfiguration(testConfig, streams);
 	}
@@ -126,9 +134,9 @@ public class FanOutRecordPublisherConfigurationTest extends TestLogger {
 		exception.expectMessage(msg);
 
 		Properties testConfig = TestUtils.getStandardProperties();
-		testConfig.setProperty(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE, ConsumerConfigConstants.RecordPublisherType.EFO.toString());
-		testConfig.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, ConsumerConfigConstants.EFORegistrationType.NONE.toString());
-		testConfig.setProperty(ConsumerConfigConstants.EFO_CONSUMER_ARN_PREFIX + "." + "fakedstream1", "fakedstream1");
+		testConfig.setProperty(RECORD_PUBLISHER_TYPE, EFO.toString());
+		testConfig.setProperty(EFO_REGISTRATION_TYPE, NONE.toString());
+		testConfig.setProperty(EFO_CONSUMER_ARN_PREFIX + "." + "fakedstream1", "fakedstream1");
 
 		new FanOutRecordPublisherConfiguration(testConfig, streams);
 	}
@@ -136,9 +144,9 @@ public class FanOutRecordPublisherConfigurationTest extends TestLogger {
 	@Test
 	public void testParseRegisterStreamConsumerTimeout() {
 		Properties testConfig = TestUtils.getStandardProperties();
-		testConfig.setProperty(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE, ConsumerConfigConstants.RecordPublisherType.EFO.toString());
-		testConfig.setProperty(ConsumerConfigConstants.EFO_CONSUMER_NAME, "name");
-		testConfig.setProperty(ConsumerConfigConstants.REGISTER_STREAM_TIMEOUT_SECONDS, "120");
+		testConfig.setProperty(RECORD_PUBLISHER_TYPE, EFO.toString());
+		testConfig.setProperty(EFO_CONSUMER_NAME, "name");
+		testConfig.setProperty(REGISTER_STREAM_TIMEOUT_SECONDS, "120");
 
 		FanOutRecordPublisherConfiguration configuration = new FanOutRecordPublisherConfiguration(testConfig, Collections.emptyList());
 
@@ -149,9 +157,9 @@ public class FanOutRecordPublisherConfigurationTest extends TestLogger {
 	@Test
 	public void testParseDeregisterStreamConsumerTimeout() {
 		Properties testConfig = TestUtils.getStandardProperties();
-		testConfig.setProperty(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE, ConsumerConfigConstants.RecordPublisherType.EFO.toString());
-		testConfig.setProperty(ConsumerConfigConstants.EFO_CONSUMER_NAME, "name");
-		testConfig.setProperty(ConsumerConfigConstants.DEREGISTER_STREAM_TIMEOUT_SECONDS, "240");
+		testConfig.setProperty(RECORD_PUBLISHER_TYPE, EFO.toString());
+		testConfig.setProperty(EFO_CONSUMER_NAME, "name");
+		testConfig.setProperty(DEREGISTER_STREAM_TIMEOUT_SECONDS, "240");
 
 		FanOutRecordPublisherConfiguration configuration = new FanOutRecordPublisherConfiguration(testConfig, Collections.emptyList());
 

@@ -32,7 +32,6 @@ import com.amazonaws.services.kinesis.model.DescribeStreamResult;
 import com.amazonaws.services.kinesis.model.Shard;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.kinesis.connectors.flink.config.AWSConfigConstants;
 import software.amazon.kinesis.connectors.flink.model.StreamShardHandle;
 
 import javax.annotation.Nullable;
@@ -42,6 +41,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import static software.amazon.kinesis.connectors.flink.config.AWSConfigConstants.AWS_ENDPOINT;
+import static software.amazon.kinesis.connectors.flink.config.AWSConfigConstants.AWS_REGION;
 import static software.amazon.kinesis.connectors.flink.util.AWSUtil.getCredentialsProvider;
 import static software.amazon.kinesis.connectors.flink.util.AWSUtil.setAwsClientConfigProperties;
 
@@ -90,11 +91,11 @@ public class DynamoDBStreamsProxy extends KinesisProxy {
 		AmazonDynamoDBStreamsAdapterClient adapterClient =
 				new AmazonDynamoDBStreamsAdapterClient(credentials, awsClientConfig);
 
-		if (configProps.containsKey(AWSConfigConstants.AWS_ENDPOINT)) {
-			adapterClient.setEndpoint(configProps.getProperty(AWSConfigConstants.AWS_ENDPOINT));
+		if (configProps.containsKey(AWS_ENDPOINT)) {
+			adapterClient.setEndpoint(configProps.getProperty(AWS_ENDPOINT));
 		} else {
 			adapterClient.setRegion(Region.getRegion(
-					Regions.fromName(configProps.getProperty(AWSConfigConstants.AWS_REGION))));
+					Regions.fromName(configProps.getProperty(AWS_REGION))));
 		}
 
 		return adapterClient;

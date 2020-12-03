@@ -50,8 +50,6 @@ public class PollingRecordPublisher implements RecordPublisher {
 
 	private static final Logger LOG = LoggerFactory.getLogger(PollingRecordPublisher.class);
 
-	private static final SequenceNumber TIMESTAMP_SENTINEL_SEQUENCE_NUMBER = SENTINEL_AT_TIMESTAMP_SEQUENCE_NUM.get();
-
 	private final PollingRecordPublisherMetricsReporter metricsReporter;
 
 	private final KinesisProxyInterface kinesisProxy;
@@ -112,7 +110,6 @@ public class PollingRecordPublisher implements RecordPublisher {
 		GetRecordsResult result = getRecords(nextShardItr, maxNumberOfRecords);
 
 		RecordBatch recordBatch = new RecordBatch(result.getRecords(), subscribedShard, result.getMillisBehindLatest());
-
 		SequenceNumber latestSequenceNumber = consumer.accept(recordBatch);
 
 		nextStartingPosition = getNextStartingPosition(latestSequenceNumber);
@@ -125,7 +122,7 @@ public class PollingRecordPublisher implements RecordPublisher {
 		// If the first RecordBatch is empty, then the latestSequenceNumber would be the timestamp sentinel.
 		// This is because we have not yet received any real sequence numbers on this shard.
 		// In this condition we should retry from the previous starting position (AT_TIMESTAMP).
-		if (TIMESTAMP_SENTINEL_SEQUENCE_NUMBER.equals(latestSequenceNumber)) {
+		if (SENTINEL_AT_TIMESTAMP_SEQUENCE_NUM.get().equals(latestSequenceNumber)) {
 			Preconditions.checkState(nextStartingPosition.getShardIteratorType() == AT_TIMESTAMP);
 			return nextStartingPosition;
 		} else {

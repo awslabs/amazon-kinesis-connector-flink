@@ -20,6 +20,7 @@
 package software.amazon.kinesis.connectors.flink.proxy;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.util.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,7 +74,7 @@ public class KinesisProxyV2 implements KinesisProxyV2Interface {
 			final SdkAsyncHttpClient httpClient,
 			final FanOutRecordPublisherConfiguration fanOutRecordPublisherConfiguration,
 			final FullJitterBackoff backoff) {
-		this.kinesisAsyncClient = kinesisAsyncClient;
+		this.kinesisAsyncClient = Preconditions.checkNotNull(kinesisAsyncClient);
 		this.httpClient = httpClient;
 		this.fanOutRecordPublisherConfiguration = fanOutRecordPublisherConfiguration;
 		this.backoff = backoff;

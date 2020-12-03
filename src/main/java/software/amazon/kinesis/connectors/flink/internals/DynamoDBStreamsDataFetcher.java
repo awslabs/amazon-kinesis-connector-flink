@@ -102,7 +102,8 @@ public class DynamoDBStreamsDataFetcher<T> extends KinesisDataFetcher<T> {
 		Integer subscribedShardStateIndex,
 		StreamShardHandle handle,
 		SequenceNumber lastSeqNum,
-		MetricGroup metricGroup) throws InterruptedException {
+		MetricGroup metricGroup,
+		KinesisDeserializationSchema<T> shardDeserializer) throws InterruptedException {
 
 		return new ShardConsumer<T>(
 			this,
@@ -110,6 +111,7 @@ public class DynamoDBStreamsDataFetcher<T> extends KinesisDataFetcher<T> {
 			subscribedShardStateIndex,
 			handle,
 			lastSeqNum,
-			new ShardConsumerMetricsReporter(metricGroup));
+			new ShardConsumerMetricsReporter(metricGroup),
+			shardDeserializer);
 	}
 }

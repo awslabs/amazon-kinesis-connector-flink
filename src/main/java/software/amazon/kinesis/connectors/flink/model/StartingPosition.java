@@ -32,6 +32,7 @@ import static com.amazonaws.services.kinesis.model.ShardIteratorType.AT_SEQUENCE
 import static com.amazonaws.services.kinesis.model.ShardIteratorType.AT_TIMESTAMP;
 import static com.amazonaws.services.kinesis.model.ShardIteratorType.LATEST;
 import static com.amazonaws.services.kinesis.model.ShardIteratorType.TRIM_HORIZON;
+import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber.isSentinelSequenceNumber;
 
 /**
  * The position in which to start consuming from a stream.
@@ -86,7 +87,7 @@ public class StartingPosition {
 	}
 
 	private static StartingPosition fromSequenceNumber(final SequenceNumber sequenceNumber, final boolean restart) {
-		if (SentinelSequenceNumber.isSentinelSequenceNumber(sequenceNumber)) {
+		if (isSentinelSequenceNumber(sequenceNumber)) {
 			return new StartingPosition(fromSentinelSequenceNumber(sequenceNumber), null);
 		} else {
 			// we will be starting from an actual sequence number (due to restore from failure).

@@ -24,8 +24,8 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.auth.SystemPropertiesCredentialsProvider;
+import com.amazonaws.auth.WebIdentityTokenCredentialsProvider;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -33,7 +33,7 @@ import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import software.amazon.kinesis.connectors.flink.config.AWSConfigConstants;
-import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants;
+import software.amazon.kinesis.connectors.flink.config.AWSConfigConstants.CredentialProvider;
 import software.amazon.kinesis.connectors.flink.model.StartingPosition;
 
 import java.text.SimpleDateFormat;
@@ -45,6 +45,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static software.amazon.kinesis.connectors.flink.config.AWSConfigConstants.AWS_CREDENTIALS_PROVIDER;
+import static software.amazon.kinesis.connectors.flink.config.AWSConfigConstants.CredentialProvider.ASSUME_ROLE;
+import static software.amazon.kinesis.connectors.flink.config.AWSConfigConstants.CredentialProvider.AUTO;
+import static software.amazon.kinesis.connectors.flink.config.AWSConfigConstants.CredentialProvider.BASIC;
+import static software.amazon.kinesis.connectors.flink.config.AWSConfigConstants.CredentialProvider.WEB_IDENTITY_TOKEN;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DEFAULT_STREAM_TIMESTAMP_DATE_FORMAT;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.STREAM_INITIAL_TIMESTAMP;
 import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber.SENTINEL_AT_TIMESTAMP_SEQUENCE_NUM;
 import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber.SENTINEL_LATEST_SEQUENCE_NUM;
 
@@ -68,32 +75,50 @@ public class AWSUtilTest {
 	}
 
 	@Test
+	public void testGetCredentialsProvider() {
+		Properties testConfig = new Properties();
+		testConfig.setProperty(AWS_CREDENTIALS_PROVIDER, "WEB_IDENTITY_TOKEN");
+
+		AWSCredentialsProvider credentialsProvider = AWSUtil.getCredentialsProvider(testConfig);
+		assertTrue(credentialsProvider instanceof WebIdentityTokenCredentialsProvider);
+	}
+
+	@Test
 	public void testGetCredentialsProviderTypeDefaultsAuto() {
-		assertEquals(AWSConfigConstants.CredentialProvider.AUTO, AWSUtil.getCredentialProviderType(new Properties(), AWSConfigConstants.AWS_CREDENTIALS_PROVIDER));
+		assertEquals(AUTO, AWSUtil.getCredentialProviderType(new Properties(), AWS_CREDENTIALS_PROVIDER));
 	}
 
 	@Test
 	public void testGetCredentialsProviderTypeBasic() {
 		Properties testConfig = new Properties();
-		testConfig.setProperty(AWSConfigConstants.accessKeyId(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER), "ak");
-		testConfig.setProperty(AWSConfigConstants.secretKey(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER), "sk");
+		testConfig.setProperty(AWSConfigConstants.accessKeyId(AWS_CREDENTIALS_PROVIDER), "ak");
+		testConfig.setProperty(AWSConfigConstants.secretKey(AWS_CREDENTIALS_PROVIDER), "sk");
 
-		assertEquals(AWSConfigConstants.CredentialProvider.BASIC, AWSUtil.getCredentialProviderType(testConfig, AWSConfigConstants.AWS_CREDENTIALS_PROVIDER));
+		assertEquals(BASIC, AWSUtil.getCredentialProviderType(testConfig, AWS_CREDENTIALS_PROVIDER));
+	}
+
+	@Test
+	public void testGetCredentialsProviderTypeWebIdentityToken() {
+		Properties testConfig = new Properties();
+		testConfig.setProperty(AWS_CREDENTIALS_PROVIDER, "WEB_IDENTITY_TOKEN");
+
+		CredentialProvider type = AWSUtil.getCredentialProviderType(testConfig, AWS_CREDENTIALS_PROVIDER);
+		assertEquals(WEB_IDENTITY_TOKEN, type);
 	}
 
 	@Test
 	public void testGetCredentialsProviderTypeAssumeRole() {
 		Properties testConfig = new Properties();
-		testConfig.setProperty(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER, "ASSUME_ROLE");
+		testConfig.setProperty(AWS_CREDENTIALS_PROVIDER, "ASSUME_ROLE");
 
-		AWSConfigConstants.CredentialProvider type = AWSUtil.getCredentialProviderType(testConfig, AWSConfigConstants.AWS_CREDENTIALS_PROVIDER);
-		Assert.assertEquals(AWSConfigConstants.CredentialProvider.ASSUME_ROLE, type);
+		CredentialProvider type = AWSUtil.getCredentialProviderType(testConfig, AWS_CREDENTIALS_PROVIDER);
+		assertEquals(ASSUME_ROLE, type);
 	}
 
 	@Test
 	public void testGetCredentialsProviderEnvironmentVariables() {
 		Properties testConfig = new Properties();
-		testConfig.setProperty(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER, "ENV_VAR");
+		testConfig.setProperty(AWS_CREDENTIALS_PROVIDER, "ENV_VAR");
 
 		AWSCredentialsProvider credentialsProvider = AWSUtil.getCredentialsProvider(testConfig);
 
@@ -103,7 +128,7 @@ public class AWSUtilTest {
 	@Test
 	public void testGetCredentialsProviderSystemProperties() {
 		Properties testConfig = new Properties();
-		testConfig.setProperty(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER, "SYS_PROP");
+		testConfig.setProperty(AWS_CREDENTIALS_PROVIDER, "SYS_PROP");
 
 		AWSCredentialsProvider credentialsProvider = AWSUtil.getCredentialsProvider(testConfig);
 
@@ -113,10 +138,10 @@ public class AWSUtilTest {
 	@Test
 	public void testGetCredentialsProviderBasic() {
 		Properties testConfig = new Properties();
-		testConfig.setProperty(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER, "BASIC");
+		testConfig.setProperty(AWS_CREDENTIALS_PROVIDER, "BASIC");
 
-		testConfig.setProperty(AWSConfigConstants.accessKeyId(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER), "ak");
-		testConfig.setProperty(AWSConfigConstants.secretKey(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER), "sk");
+		testConfig.setProperty(AWSConfigConstants.accessKeyId(AWS_CREDENTIALS_PROVIDER), "ak");
+		testConfig.setProperty(AWSConfigConstants.secretKey(AWS_CREDENTIALS_PROVIDER), "sk");
 
 		AWSCredentials credentials = AWSUtil.getCredentialsProvider(testConfig).getCredentials();
 
@@ -127,7 +152,7 @@ public class AWSUtilTest {
 	@Test
 	public void testGetCredentialsProviderAuto() {
 		Properties testConfig = new Properties();
-		testConfig.setProperty(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER, "AUTO");
+		testConfig.setProperty(AWS_CREDENTIALS_PROVIDER, "AUTO");
 
 		AWSCredentialsProvider credentialsProvider = AWSUtil.getCredentialsProvider(testConfig);
 
@@ -139,7 +164,7 @@ public class AWSUtilTest {
 		exception.expect(IllegalArgumentException.class);
 
 		Properties testConfig = new Properties();
-		testConfig.setProperty(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER, "INVALID_PROVIDER");
+		testConfig.setProperty(AWS_CREDENTIALS_PROVIDER, "INVALID_PROVIDER");
 
 		AWSUtil.getCredentialsProvider(testConfig);
 	}
@@ -147,9 +172,9 @@ public class AWSUtilTest {
 	@Test
 	public void testGetCredentialsProviderProfile() {
 		Properties testConfig = new Properties();
-		testConfig.setProperty(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER, "PROFILE");
-		testConfig.setProperty(AWSConfigConstants.profileName(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER), "default");
-		testConfig.setProperty(AWSConfigConstants.profilePath(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER), "src/test/resources/profile");
+		testConfig.setProperty(AWS_CREDENTIALS_PROVIDER, "PROFILE");
+		testConfig.setProperty(AWSConfigConstants.profileName(AWS_CREDENTIALS_PROVIDER), "default");
+		testConfig.setProperty(AWSConfigConstants.profilePath(AWS_CREDENTIALS_PROVIDER), "src/test/resources/profile");
 
 		AWSCredentialsProvider credentialsProvider = AWSUtil.getCredentialsProvider(testConfig);
 
@@ -163,9 +188,9 @@ public class AWSUtilTest {
 	@Test
 	public void testGetCredentialsProviderNamedProfile() {
 		Properties testConfig = new Properties();
-		testConfig.setProperty(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER, "PROFILE");
-		testConfig.setProperty(AWSConfigConstants.profileName(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER), "foo");
-		testConfig.setProperty(AWSConfigConstants.profilePath(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER), "src/test/resources/profile");
+		testConfig.setProperty(AWS_CREDENTIALS_PROVIDER, "PROFILE");
+		testConfig.setProperty(AWSConfigConstants.profileName(AWS_CREDENTIALS_PROVIDER), "foo");
+		testConfig.setProperty(AWSConfigConstants.profilePath(AWS_CREDENTIALS_PROVIDER), "src/test/resources/profile");
 
 		AWSCredentialsProvider credentialsProvider = AWSUtil.getCredentialsProvider(testConfig);
 
@@ -197,10 +222,10 @@ public class AWSUtilTest {
 	@Test
 	public void testGetStartingPositionForTimestamp() throws Exception {
 		String timestamp = "2020-08-13T09:18:00.0+01:00";
-		Date expectedTimestamp = new SimpleDateFormat(ConsumerConfigConstants.DEFAULT_STREAM_TIMESTAMP_DATE_FORMAT).parse(timestamp);
+		Date expectedTimestamp = new SimpleDateFormat(DEFAULT_STREAM_TIMESTAMP_DATE_FORMAT).parse(timestamp);
 
 		Properties consumerProperties = new Properties();
-		consumerProperties.setProperty(ConsumerConfigConstants.STREAM_INITIAL_TIMESTAMP, timestamp);
+		consumerProperties.setProperty(STREAM_INITIAL_TIMESTAMP, timestamp);
 
 		StartingPosition position = AWSUtil.getStartingPosition(SENTINEL_AT_TIMESTAMP_SEQUENCE_NUM.get(), consumerProperties);
 
