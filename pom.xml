@@ -45,6 +45,7 @@ under the License.
 		<aws.dynamodbstreams-kinesis-adapter.version>1.5.0</aws.dynamodbstreams-kinesis-adapter.version>
 		<httpclient.version>4.5.9</httpclient.version>
 		<httpcore.version>4.4.11</httpcore.version>
+		<jaxb.api.version>2.3.1</jaxb.api.version>
 	</properties>
 
 	<scm>
@@ -249,6 +250,14 @@ under the License.
 			<version>2.10.1</version>
 		</dependency>
 
+		<dependency>
+			<!-- KPL requires jaxb-api for javax.xml.bind.DatatypeConverter -->
+			<groupId>javax.xml.bind</groupId>
+			<artifactId>jaxb-api</artifactId>
+			<version>${jaxb.api.version}</version>
+			<!-- packaged in flink-dist -->
+			<scope>provided</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
