@@ -31,7 +31,6 @@ import com.amazonaws.services.kinesis.model.Shard;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import software.amazon.kinesis.connectors.flink.config.AWSConfigConstants;
-import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants;
 import software.amazon.kinesis.connectors.flink.internals.publisher.RecordBatch;
 import software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher;
 import software.amazon.kinesis.connectors.flink.model.SequenceNumber;
@@ -45,6 +44,12 @@ import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFORegistrationType.NONE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_CONSUMER_ARN_PREFIX;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_REGISTRATION_TYPE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RECORD_PUBLISHER_TYPE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RecordPublisherType.EFO;
 
 /**
  * General test utils.
@@ -125,9 +130,9 @@ public class TestUtils {
 
 	public static Properties efoProperties() {
 		Properties consumerConfig = new Properties();
-		consumerConfig.setProperty(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE, ConsumerConfigConstants.RecordPublisherType.EFO.name());
-		consumerConfig.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, ConsumerConfigConstants.EFORegistrationType.NONE.name());
-		consumerConfig.setProperty(ConsumerConfigConstants.EFO_CONSUMER_ARN_PREFIX + "." + "fakeStream", "stream-consumer-arn");
+		consumerConfig.setProperty(RECORD_PUBLISHER_TYPE, EFO.name());
+		consumerConfig.setProperty(EFO_REGISTRATION_TYPE, NONE.name());
+		consumerConfig.setProperty(EFO_CONSUMER_ARN_PREFIX + "." + "fakeStream", "stream-consumer-arn");
 		return consumerConfig;
 	}
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## Release 2.0.0 (TBD)
+* Add KDS connector support in the Table API and SQL layer.
+  ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/6))
+
 ## Release 1.0.4 (November 11th, 2020)
 * Fix issue when Polling consumer using timestamp with empty shard
   ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/6))

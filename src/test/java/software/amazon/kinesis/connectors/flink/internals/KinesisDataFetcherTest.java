@@ -39,7 +39,6 @@ import org.junit.Test;
 import org.powermock.reflect.Whitebox;
 import software.amazon.kinesis.connectors.flink.FlinkKinesisConsumer;
 import software.amazon.kinesis.connectors.flink.KinesisShardAssigner;
-import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants;
 import software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher;
 import software.amazon.kinesis.connectors.flink.model.KinesisStreamShardState;
 import software.amazon.kinesis.connectors.flink.model.SequenceNumber;
@@ -81,6 +80,10 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFORegistrationType.NONE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_REGISTRATION_TYPE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RECORD_PUBLISHER_TYPE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RecordPublisherType.EFO;
 
 /**
  * Tests for the {@link KinesisDataFetcher}.
@@ -627,7 +630,7 @@ public class KinesisDataFetcherTest extends TestLogger {
 		StreamShardHandle streamShardHandle = new StreamShardHandle(streamName, shard);
 
 		assertEquals(kinesisStreamShard, KinesisDataFetcher.convertToStreamShardMetadata(streamShardHandle));
-		Assert.assertEquals(streamShardHandle, KinesisDataFetcher.convertToStreamShardHandle(kinesisStreamShard));
+		assertEquals(streamShardHandle, KinesisDataFetcher.convertToStreamShardHandle(kinesisStreamShard));
 	}
 
 	private static class DummyFlinkKinesisConsumer<T> extends FlinkKinesisConsumer<T> {
@@ -854,7 +857,7 @@ public class KinesisDataFetcherTest extends TestLogger {
 		DummyFlinkKinesisConsumer<String> consumer = new DummyFlinkKinesisConsumer<>(
 			TestUtils.getStandardProperties(), fetcher, 1, 0);
 
-		CheckedThread consumerThread = new CheckedThread() {
+		CheckedThread consumerThread = new CheckedThread("FlinkKinesisConsumer") {
 			@Override
 			public void go() throws Exception {
 				consumer.run(new TestSourceContext<>());
@@ -865,6 +868,10 @@ public class KinesisDataFetcherTest extends TestLogger {
 
 		// ShardConsumer exception (from deserializer) will result in fetcher being shut down.
 		fetcher.waitUntilShutdown(20, TimeUnit.SECONDS);
+
+		// Ensure that KinesisDataFetcher has exited its while(running) loop and is inside its awaitTermination()
+		// method before we interrupt its thread, so that our interrupt doesn't get absorbed by any other mechanism.
+		fetcher.waitUntilAwaitTermination(20, TimeUnit.SECONDS);
 
 		// Interrupt the thread so that KinesisDataFetcher#awaitTermination() will throw InterruptedException.
 		consumerThread.interrupt();
@@ -889,8 +896,8 @@ public class KinesisDataFetcherTest extends TestLogger {
 	@Test
 	public void testRecordPublisherFactoryIsTornDown() {
 		Properties config = TestUtils.getStandardProperties();
-		config.setProperty(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE, ConsumerConfigConstants.RecordPublisherType.EFO.name());
-		config.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, ConsumerConfigConstants.EFORegistrationType.NONE.name());
+		config.setProperty(RECORD_PUBLISHER_TYPE, EFO.name());
+		config.setProperty(EFO_REGISTRATION_TYPE, NONE.name());
 
 		KinesisProxyV2Interface kinesisV2 = mock(KinesisProxyV2Interface.class);
 

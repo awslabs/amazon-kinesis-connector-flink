@@ -23,7 +23,7 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.util.Preconditions;
 
-import software.amazon.kinesis.connectors.flink.internals.KinesisDataFetcher;
+import software.amazon.kinesis.connectors.flink.internals.KinesisDataFetcher.FlinkKinesisProxyFactory;
 import software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher;
 import software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisherFactory;
 import software.amazon.kinesis.connectors.flink.metrics.PollingRecordPublisherMetricsReporter;
@@ -39,9 +39,9 @@ import java.util.Properties;
 @Internal
 public class PollingRecordPublisherFactory implements RecordPublisherFactory {
 
-	private final KinesisDataFetcher.FlinkKinesisProxyFactory kinesisProxyFactory;
+	private final FlinkKinesisProxyFactory kinesisProxyFactory;
 
-	public PollingRecordPublisherFactory(final KinesisDataFetcher.FlinkKinesisProxyFactory kinesisProxyFactory) {
+	public PollingRecordPublisherFactory(final FlinkKinesisProxyFactory kinesisProxyFactory) {
 		this.kinesisProxyFactory = kinesisProxyFactory;
 	}
 

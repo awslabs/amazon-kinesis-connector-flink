@@ -49,7 +49,7 @@ public class TestRuntimeContext extends StreamingRuntimeContext {
 			new TestStreamOperator(),
 			new MockEnvironmentBuilder()
 				.setTaskName("mockTask")
-				.setMemorySize(4 * MemoryManager.DEFAULT_PAGE_SIZE)
+				.setManagedMemorySize(4 * MemoryManager.DEFAULT_PAGE_SIZE)
 				.build(),
 			Collections.emptyMap());
 

@@ -22,6 +22,7 @@ package software.amazon.kinesis.connectors.flink.serialization;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 
 import com.amazonaws.services.dynamodbv2.model.Record;
+import com.amazonaws.services.dynamodbv2.streamsadapter.model.RecordObjectMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
@@ -30,7 +31,7 @@ import java.io.IOException;
  * Schema used for deserializing DynamoDB streams records.
  */
 public class DynamoDBStreamsSchema implements KinesisDeserializationSchema<Record> {
-	private static final ObjectMapper MAPPER = new ObjectMapper();
+	private static final ObjectMapper MAPPER = new RecordObjectMapper();
 
 	@Override
 	public Record deserialize(byte[] message, String partitionKey, String seqNum,

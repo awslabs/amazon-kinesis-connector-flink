@@ -20,13 +20,15 @@
 package software.amazon.kinesis.connectors.flink.internals.publisher.polling;
 
 import org.junit.Test;
-import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants;
 
 import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.SHARD_GETRECORDS_INTERVAL_MILLIS;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.SHARD_GETRECORDS_MAX;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.SHARD_USE_ADAPTIVE_READS;
 
 /**
  * Tests for {@link PollingRecordPublisherConfiguration}.
@@ -43,7 +45,7 @@ public class PollingRecordPublisherConfigurationTest {
 
 	@Test
 	public void testGetFetchIntervalMillis() {
-		Properties properties = properties(ConsumerConfigConstants.SHARD_GETRECORDS_INTERVAL_MILLIS, "1");
+		Properties properties = properties(SHARD_GETRECORDS_INTERVAL_MILLIS, "1");
 		PollingRecordPublisherConfiguration configuration = new PollingRecordPublisherConfiguration(properties);
 
 		assertEquals(configuration.getFetchIntervalMillis(), 1);
@@ -51,7 +53,7 @@ public class PollingRecordPublisherConfigurationTest {
 
 	@Test
 	public void testGetMaxNumberOfRecordsPerFetch() {
-		Properties properties = properties(ConsumerConfigConstants.SHARD_GETRECORDS_MAX, "2");
+		Properties properties = properties(SHARD_GETRECORDS_MAX, "2");
 		PollingRecordPublisherConfiguration configuration = new PollingRecordPublisherConfiguration(properties);
 
 		assertEquals(configuration.getMaxNumberOfRecordsPerFetch(), 2);
@@ -59,7 +61,7 @@ public class PollingRecordPublisherConfigurationTest {
 
 	@Test
 	public void testIsAdaptiveReads() {
-		Properties properties = properties(ConsumerConfigConstants.SHARD_USE_ADAPTIVE_READS, "true");
+		Properties properties = properties(SHARD_USE_ADAPTIVE_READS, "true");
 		PollingRecordPublisherConfiguration configuration = new PollingRecordPublisherConfiguration(properties);
 
 		assertTrue(configuration.isAdaptiveReads());

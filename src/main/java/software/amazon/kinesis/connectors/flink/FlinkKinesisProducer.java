@@ -97,7 +97,7 @@ public class FlinkKinesisProducer<OUT> extends RichSinkFunction<OUT> implements 
 	private transient KinesisProducer producer;
 
 	/* Backpressuring waits for this latch, triggered by record callback */
-	private transient TimeoutLatch backpressureLatch;
+	private transient volatile TimeoutLatch backpressureLatch;
 
 	/* Callback handling failures */
 	private transient FutureCallback<UserRecordResult> callback;
@@ -121,6 +121,12 @@ public class FlinkKinesisProducer<OUT> extends RichSinkFunction<OUT> implements 
 
 		// create a simple wrapper for the serialization schema
 		this(new KinesisSerializationSchema<OUT>() {
+
+			@Override
+			public void open(SerializationSchema.InitializationContext context) throws Exception {
+				schema.open(context);
+			}
+
 			@Override
 			public ByteBuffer serialize(OUT element) {
 				// wrap into ByteBuffer
@@ -148,9 +154,9 @@ public class FlinkKinesisProducer<OUT> extends RichSinkFunction<OUT> implements 
 
 		checkNotNull(schema, "serialization schema cannot be null");
 		checkArgument(
-			InstantiationUtil.isSerializable(schema),
-			"The provided serialization schema is not serializable: " + schema.getClass().getName() + ". " +
-				"Please check that it does not contain references to non-serializable instances.");
+				InstantiationUtil.isSerializable(schema),
+				"The provided serialization schema is not serializable: " + schema.getClass().getName() + ". " +
+						"Please check that it does not contain references to non-serializable instances.");
 		this.schema = schema;
 	}
 
@@ -195,9 +201,9 @@ public class FlinkKinesisProducer<OUT> extends RichSinkFunction<OUT> implements 
 	public void setCustomPartitioner(KinesisPartitioner<OUT> partitioner) {
 		checkNotNull(partitioner, "partitioner cannot be null");
 		checkArgument(
-			InstantiationUtil.isSerializable(partitioner),
-			"The provided custom partitioner is not serializable: " + partitioner.getClass().getName() + ". " +
-				"Please check that it does not contain references to non-serializable instances.");
+				InstantiationUtil.isSerializable(partitioner),
+				"The provided custom partitioner is not serializable: " + partitioner.getClass().getName() + ". " +
+						"Please check that it does not contain references to non-serializable instances.");
 
 		this.customPartitioner = partitioner;
 	}
@@ -207,6 +213,8 @@ public class FlinkKinesisProducer<OUT> extends RichSinkFunction<OUT> implements 
 	@Override
 	public void open(Configuration parameters) throws Exception {
 		super.open(parameters);
+
+		schema.open(() -> getRuntimeContext().getMetricGroup().addGroup("user"));
 
 		// check and pass the configuration properties
 		KinesisProducerConfiguration producerConfig = KinesisConfigUtil.getValidatedProducerConfiguration(configProps);
@@ -328,7 +336,7 @@ public class FlinkKinesisProducer<OUT> extends RichSinkFunction<OUT> implements 
 		flushSync();
 		if (producer.getOutstandingRecordsCount() > 0) {
 			throw new IllegalStateException(
-				"Number of outstanding records must be zero at this point: " + producer.getOutstandingRecordsCount());
+					"Number of outstanding records must be zero at this point: " + producer.getOutstandingRecordsCount());
 		}
 
 		// if the flushed requests has errors, we should propagate it also and fail the checkpoint
@@ -363,7 +371,7 @@ public class FlinkKinesisProducer<OUT> extends RichSinkFunction<OUT> implements 
 			if (failOnError) {
 				throw new RuntimeException("An exception was thrown while processing a record: " + errorMessages, thrownException);
 			} else {
-				LOG.warn("An exception was thrown while processing a record: {}", thrownException, errorMessages);
+				LOG.warn("An exception was thrown while processing a record: {}.", errorMessages, thrownException);
 
 				// reset, prevent double throwing
 				thrownException = null;

@@ -42,6 +42,7 @@ import software.amazon.kinesis.connectors.flink.config.AWSConfigConstants;
 import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants;
 
 import java.net.URI;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
@@ -59,6 +60,19 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static software.amazon.awssdk.http.Protocol.HTTP2;
+import static software.amazon.kinesis.connectors.flink.config.AWSConfigConstants.AWS_CREDENTIALS_PROVIDER;
+import static software.amazon.kinesis.connectors.flink.config.AWSConfigConstants.AWS_REGION;
+import static software.amazon.kinesis.connectors.flink.config.AWSConfigConstants.roleArn;
+import static software.amazon.kinesis.connectors.flink.config.AWSConfigConstants.roleSessionName;
+import static software.amazon.kinesis.connectors.flink.config.AWSConfigConstants.webIdentityTokenFile;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DEFAULT_EFO_HTTP_CLIENT_MAX_CONURRENCY;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFORegistrationType.EAGER;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFORegistrationType.LAZY;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFORegistrationType.NONE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_HTTP_CLIENT_MAX_CONCURRENCY;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RECORD_PUBLISHER_TYPE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RecordPublisherType.EFO;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RecordPublisherType.POLLING;
 
 /**
  * Tests for {@link AwsV2Util}.
@@ -67,7 +81,7 @@ public class AwsV2UtilTest {
 
 	@Test
 	public void testGetCredentialsProviderEnvironmentVariables() {
-		Properties properties = properties(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER, "ENV_VAR");
+		Properties properties = properties(AWS_CREDENTIALS_PROVIDER, "ENV_VAR");
 
 		AwsCredentialsProvider credentialsProvider = AwsV2Util.getCredentialsProvider(properties);
 
@@ -76,7 +90,7 @@ public class AwsV2UtilTest {
 
 	@Test
 	public void testGetCredentialsProviderSystemProperties() {
-		Properties properties = properties(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER, "SYS_PROP");
+		Properties properties = properties(AWS_CREDENTIALS_PROVIDER, "SYS_PROP");
 
 		AwsCredentialsProvider credentialsProvider = AwsV2Util.getCredentialsProvider(properties);
 
@@ -84,8 +98,44 @@ public class AwsV2UtilTest {
 	}
 
 	@Test
+	public void testGetCredentialsProviderWebIdentityTokenFileCredentialsProvider() {
+		Properties properties = properties(AWS_CREDENTIALS_PROVIDER, "WEB_IDENTITY_TOKEN");
+
+		AwsCredentialsProvider credentialsProvider = AwsV2Util.getCredentialsProvider(properties);
+
+		assertTrue(credentialsProvider instanceof WebIdentityTokenFileCredentialsProvider);
+	}
+
+	@Test
+	public void testGetWebIdentityTokenFileCredentialsProvider() {
+		Properties properties = properties(AWS_CREDENTIALS_PROVIDER, "WEB_IDENTITY_TOKEN");
+		properties.setProperty(roleArn(AWS_CREDENTIALS_PROVIDER), "roleArn");
+		properties.setProperty(roleSessionName(AWS_CREDENTIALS_PROVIDER), "roleSessionName");
+
+		WebIdentityTokenFileCredentialsProvider.Builder builder = mockWebIdentityTokenFileCredentialsProviderBuilder();
+
+		AwsV2Util.getWebIdentityTokenFileCredentialsProvider(builder, properties, AWS_CREDENTIALS_PROVIDER);
+
+		verify(builder).roleArn("roleArn");
+		verify(builder).roleSessionName("roleSessionName");
+		verify(builder, never()).webIdentityTokenFile(any());
+	}
+
+	@Test
+	public void testGetWebIdentityTokenFileCredentialsProviderWithWebIdentityFile() {
+		Properties properties = properties(AWS_CREDENTIALS_PROVIDER, "WEB_IDENTITY_TOKEN");
+		properties.setProperty(webIdentityTokenFile(AWS_CREDENTIALS_PROVIDER), "webIdentityTokenFile");
+
+		WebIdentityTokenFileCredentialsProvider.Builder builder = mockWebIdentityTokenFileCredentialsProviderBuilder();
+
+		AwsV2Util.getWebIdentityTokenFileCredentialsProvider(builder, properties, AWS_CREDENTIALS_PROVIDER);
+
+		verify(builder).webIdentityTokenFile(Paths.get("webIdentityTokenFile"));
+	}
+
+	@Test
 	public void testGetCredentialsProviderAuto() {
-		Properties properties = properties(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER, "AUTO");
+		Properties properties = properties(AWS_CREDENTIALS_PROVIDER, "AUTO");
 
 		AwsCredentialsProvider credentialsProvider = AwsV2Util.getCredentialsProvider(properties);
 
@@ -94,24 +144,24 @@ public class AwsV2UtilTest {
 
 	@Test
 	public void testGetCredentialsProviderAssumeRole() {
-		Properties properties = spy(properties(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER, "ASSUME_ROLE"));
-		properties.setProperty(AWSConfigConstants.AWS_REGION, "eu-west-2");
+		Properties properties = spy(properties(AWS_CREDENTIALS_PROVIDER, "ASSUME_ROLE"));
+		properties.setProperty(AWS_REGION, "eu-west-2");
 
 		AwsCredentialsProvider credentialsProvider = AwsV2Util.getCredentialsProvider(properties);
 
 		assertTrue(credentialsProvider instanceof StsAssumeRoleCredentialsProvider);
 
-		verify(properties).getProperty(AWSConfigConstants.roleArn(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER));
-		verify(properties).getProperty(AWSConfigConstants.roleSessionName(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER));
-		verify(properties).getProperty(AWSConfigConstants.externalId(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER));
-		verify(properties).getProperty(AWSConfigConstants.AWS_REGION);
+		verify(properties).getProperty(AWSConfigConstants.roleArn(AWS_CREDENTIALS_PROVIDER));
+		verify(properties).getProperty(AWSConfigConstants.roleSessionName(AWS_CREDENTIALS_PROVIDER));
+		verify(properties).getProperty(AWSConfigConstants.externalId(AWS_CREDENTIALS_PROVIDER));
+		verify(properties).getProperty(AWS_REGION);
 	}
 
 	@Test
 	public void testGetCredentialsProviderBasic() {
-		Properties properties = properties(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER, "BASIC");
-		properties.setProperty(AWSConfigConstants.accessKeyId(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER), "ak");
-		properties.setProperty(AWSConfigConstants.secretKey(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER), "sk");
+		Properties properties = properties(AWS_CREDENTIALS_PROVIDER, "BASIC");
+		properties.setProperty(AWSConfigConstants.accessKeyId(AWS_CREDENTIALS_PROVIDER), "ak");
+		properties.setProperty(AWSConfigConstants.secretKey(AWS_CREDENTIALS_PROVIDER), "sk");
 
 		AwsCredentials credentials = AwsV2Util.getCredentialsProvider(properties).resolveCredentials();
 
@@ -121,9 +171,9 @@ public class AwsV2UtilTest {
 
 	@Test
 	public void testGetCredentialsProviderProfile() {
-		Properties properties = properties(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER, "PROFILE");
-		properties.put(AWSConfigConstants.profileName(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER), "default");
-		properties.put(AWSConfigConstants.profilePath(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER), "src/test/resources/profile");
+		Properties properties = properties(AWS_CREDENTIALS_PROVIDER, "PROFILE");
+		properties.put(AWSConfigConstants.profileName(AWS_CREDENTIALS_PROVIDER), "default");
+		properties.put(AWSConfigConstants.profilePath(AWS_CREDENTIALS_PROVIDER), "src/test/resources/profile");
 
 		AwsCredentialsProvider credentialsProvider = AwsV2Util.getCredentialsProvider(properties);
 
@@ -136,9 +186,9 @@ public class AwsV2UtilTest {
 
 	@Test
 	public void testGetCredentialsProviderNamedProfile() {
-		Properties properties = properties(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER, "PROFILE");
-		properties.setProperty(AWSConfigConstants.profileName(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER), "foo");
-		properties.setProperty(AWSConfigConstants.profilePath(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER), "src/test/resources/profile");
+		Properties properties = properties(AWS_CREDENTIALS_PROVIDER, "PROFILE");
+		properties.setProperty(AWSConfigConstants.profileName(AWS_CREDENTIALS_PROVIDER), "foo");
+		properties.setProperty(AWSConfigConstants.profilePath(AWS_CREDENTIALS_PROVIDER), "src/test/resources/profile");
 
 		AwsCredentialsProvider credentialsProvider = AwsV2Util.getCredentialsProvider(properties);
 
@@ -151,14 +201,14 @@ public class AwsV2UtilTest {
 
 	@Test
 	public void testGetRegion() {
-		Region region = AwsV2Util.getRegion(properties(AWSConfigConstants.AWS_REGION, "eu-west-2"));
+		Region region = AwsV2Util.getRegion(properties(AWS_REGION, "eu-west-2"));
 
 		assertEquals(Region.EU_WEST_2, region);
 	}
 
 	@Test
 	public void testCreateKinesisAsyncClient() {
-		Properties properties = properties(AWSConfigConstants.AWS_REGION, "eu-west-2");
+		Properties properties = properties(AWS_REGION, "eu-west-2");
 		KinesisAsyncClientBuilder builder = mockKinesisAsyncClientBuilder();
 		ClientOverrideConfiguration clientOverrideConfiguration = ClientOverrideConfiguration.builder().build();
 		SdkAsyncHttpClient httpClient = NettyNioAsyncHttpClient.builder().build();
@@ -174,7 +224,7 @@ public class AwsV2UtilTest {
 
 	@Test
 	public void testCreateKinesisAsyncClientWithEndpointOverride() {
-		Properties properties = properties(AWSConfigConstants.AWS_REGION, "eu-west-2");
+		Properties properties = properties(AWS_REGION, "eu-west-2");
 		properties.setProperty(ConsumerConfigConstants.AWS_ENDPOINT, "https://localhost");
 
 		KinesisAsyncClientBuilder builder = mockKinesisAsyncClientBuilder();
@@ -194,7 +244,7 @@ public class AwsV2UtilTest {
 		AwsV2Util.createHttpClient(clientConfiguration, builder, new Properties());
 
 		verify(builder).build();
-		verify(builder).maxConcurrency(ConsumerConfigConstants.DEFAULT_EFO_HTTP_CLIENT_MAX_CONURRENCY);
+		verify(builder).maxConcurrency(DEFAULT_EFO_HTTP_CLIENT_MAX_CONURRENCY);
 		verify(builder).connectionTimeout(Duration.ofSeconds(10));
 		verify(builder).writeTimeout(Duration.ofSeconds(50));
 		verify(builder).connectionMaxIdleTime(Duration.ofMinutes(1));
@@ -218,7 +268,7 @@ public class AwsV2UtilTest {
 	@Test
 	public void testCreateNettyHttpClientMaxConcurrency() {
 		Properties clientConfiguration = new Properties();
-		clientConfiguration.setProperty(ConsumerConfigConstants.EFO_HTTP_CLIENT_MAX_CONCURRENCY, "123");
+		clientConfiguration.setProperty(EFO_HTTP_CLIENT_MAX_CONCURRENCY, "123");
 
 		NettyNioAsyncHttpClient.Builder builder = mockHttpClientBuilder();
 
@@ -378,10 +428,10 @@ public class AwsV2UtilTest {
 		Properties prop = new Properties();
 		assertFalse(AwsV2Util.isUsingEfoRecordPublisher(prop));
 
-		prop.setProperty(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE, ConsumerConfigConstants.RecordPublisherType.EFO.name());
+		prop.setProperty(RECORD_PUBLISHER_TYPE, EFO.name());
 		assertTrue(AwsV2Util.isUsingEfoRecordPublisher(prop));
 
-		prop.setProperty(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE, ConsumerConfigConstants.RecordPublisherType.POLLING.name());
+		prop.setProperty(RECORD_PUBLISHER_TYPE, POLLING.name());
 		assertFalse(AwsV2Util.isUsingEfoRecordPublisher(prop));
 	}
 
@@ -390,13 +440,13 @@ public class AwsV2UtilTest {
 		Properties prop = new Properties();
 		assertFalse(AwsV2Util.isEagerEfoRegistrationType(prop));
 
-		prop.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, ConsumerConfigConstants.EFORegistrationType.EAGER.name());
+		prop.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, EAGER.name());
 		assertTrue(AwsV2Util.isEagerEfoRegistrationType(prop));
 
-		prop.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, ConsumerConfigConstants.EFORegistrationType.LAZY.name());
+		prop.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, LAZY.name());
 		assertFalse(AwsV2Util.isEagerEfoRegistrationType(prop));
 
-		prop.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, ConsumerConfigConstants.EFORegistrationType.NONE.name());
+		prop.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, NONE.name());
 		assertFalse(AwsV2Util.isEagerEfoRegistrationType(prop));
 	}
 
@@ -405,13 +455,13 @@ public class AwsV2UtilTest {
 		Properties prop = new Properties();
 		assertTrue(AwsV2Util.isLazyEfoRegistrationType(prop));
 
-		prop.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, ConsumerConfigConstants.EFORegistrationType.EAGER.name());
+		prop.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, EAGER.name());
 		assertFalse(AwsV2Util.isLazyEfoRegistrationType(prop));
 
-		prop.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, ConsumerConfigConstants.EFORegistrationType.LAZY.name());
+		prop.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, LAZY.name());
 		assertTrue(AwsV2Util.isLazyEfoRegistrationType(prop));
 
-		prop.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, ConsumerConfigConstants.EFORegistrationType.NONE.name());
+		prop.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, NONE.name());
 		assertFalse(AwsV2Util.isLazyEfoRegistrationType(prop));
 	}
 
@@ -420,13 +470,13 @@ public class AwsV2UtilTest {
 		Properties prop = new Properties();
 		assertFalse(AwsV2Util.isNoneEfoRegistrationType(prop));
 
-		prop.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, ConsumerConfigConstants.EFORegistrationType.EAGER.name());
+		prop.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, EAGER.name());
 		assertFalse(AwsV2Util.isNoneEfoRegistrationType(prop));
 
-		prop.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, ConsumerConfigConstants.EFORegistrationType.LAZY.name());
+		prop.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, LAZY.name());
 		assertFalse(AwsV2Util.isNoneEfoRegistrationType(prop));
 
-		prop.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, ConsumerConfigConstants.EFORegistrationType.NONE.name());
+		prop.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, NONE.name());
 		assertTrue(AwsV2Util.isNoneEfoRegistrationType(prop));
 	}
 

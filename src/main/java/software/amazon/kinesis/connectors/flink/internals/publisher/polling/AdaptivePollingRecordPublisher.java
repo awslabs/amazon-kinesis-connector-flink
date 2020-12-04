@@ -22,7 +22,6 @@ package software.amazon.kinesis.connectors.flink.internals.publisher.polling;
 import org.apache.flink.annotation.Internal;
 
 import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants;
-import software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher;
 import software.amazon.kinesis.connectors.flink.metrics.PollingRecordPublisherMetricsReporter;
 import software.amazon.kinesis.connectors.flink.model.SequenceNumber;
 import software.amazon.kinesis.connectors.flink.model.StartingPosition;
@@ -66,8 +65,8 @@ public class AdaptivePollingRecordPublisher extends PollingRecordPublisher {
 	}
 
 	@Override
-	public RecordPublisher.RecordPublisherRunResult run(final RecordPublisher.RecordBatchConsumer consumer) throws InterruptedException {
-		final RecordPublisher.RecordPublisherRunResult result = super.run(batch -> {
+	public RecordPublisherRunResult run(final RecordBatchConsumer consumer) throws InterruptedException {
+		final RecordPublisherRunResult result = super.run(batch -> {
 			SequenceNumber latestSequenceNumber = consumer.accept(batch);
 			lastRecordBatchSize = batch.getDeaggregatedRecordSize();
 			lastRecordBatchSizeInBytes = batch.getTotalSizeInBytes();

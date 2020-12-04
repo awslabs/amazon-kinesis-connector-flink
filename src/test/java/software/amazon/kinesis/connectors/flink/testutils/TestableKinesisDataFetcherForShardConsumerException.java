@@ -19,6 +19,7 @@
 
 package software.amazon.kinesis.connectors.flink.testutils;
 
+import org.apache.flink.core.testutils.OneShotLatch;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 
 import org.apache.flink.shaded.guava18.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -36,6 +37,8 @@ import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -43,6 +46,10 @@ import java.util.concurrent.atomic.AtomicReference;
  * {@link #awaitTermination()}.
  */
 public class TestableKinesisDataFetcherForShardConsumerException<T> extends TestableKinesisDataFetcher<T> {
+	public volatile boolean wasInterrupted = false;
+
+	private OneShotLatch awaitTerminationWaiter = new OneShotLatch();
+
 	public TestableKinesisDataFetcherForShardConsumerException(final List<String> fakeStreams,
 			final SourceFunction.SourceContext<T> sourceContext,
 			final Properties fakeConfiguration,
@@ -59,7 +66,12 @@ public class TestableKinesisDataFetcherForShardConsumerException<T> extends Test
 			subscribedStreamsToLastDiscoveredShardIdsStateUnderTest, fakeKinesis);
 	}
 
-	public volatile boolean wasInterrupted = false;
+	/**
+	 * Block until awaitTermination() has been called on this class.
+	 */
+	public void waitUntilAwaitTermination(long timeout, TimeUnit timeUnit) throws InterruptedException, TimeoutException {
+		awaitTerminationWaiter.await(timeout, timeUnit);
+	}
 
 	@Override
 	protected ExecutorService createShardConsumersThreadPool(final String subtaskName) {
@@ -70,6 +82,7 @@ public class TestableKinesisDataFetcherForShardConsumerException<T> extends Test
 
 	@Override
 	public void awaitTermination() throws InterruptedException {
+		awaitTerminationWaiter.trigger();
 		try {
 			// Force this method to only exit by thread getting interrupted.
 			while (true) {
@@ -79,10 +92,5 @@ public class TestableKinesisDataFetcherForShardConsumerException<T> extends Test
 			wasInterrupted = true;
 			throw e;
 		}
-	}
-
-	@Override
-	protected KinesisDeserializationSchema<T> getClonedDeserializationSchema() {
-		return super.getClonedDeserializationSchema();
 	}
 }

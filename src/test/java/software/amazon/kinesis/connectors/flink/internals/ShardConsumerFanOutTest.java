@@ -21,14 +21,13 @@ package software.amazon.kinesis.connectors.flink.internals;
 
 import org.junit.Test;
 import software.amazon.awssdk.services.kinesis.model.StartingPosition;
-import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants;
 import software.amazon.kinesis.connectors.flink.internals.publisher.fanout.FanOutRecordPublisherFactory;
 import software.amazon.kinesis.connectors.flink.metrics.ShardConsumerMetricsReporter;
-import software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber;
 import software.amazon.kinesis.connectors.flink.model.SequenceNumber;
 import software.amazon.kinesis.connectors.flink.proxy.KinesisProxyV2Interface;
 import software.amazon.kinesis.connectors.flink.testutils.FakeKinesisFanOutBehavioursFactory;
-import software.amazon.kinesis.connectors.flink.testutils.TestUtils;
+import software.amazon.kinesis.connectors.flink.testutils.FakeKinesisFanOutBehavioursFactory.AbstractSingleShardFanOutKinesisV2;
+import software.amazon.kinesis.connectors.flink.testutils.FakeKinesisFanOutBehavioursFactory.SingleShardFanOutKinesisV2;
 
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -39,6 +38,12 @@ import static org.junit.Assert.assertTrue;
 import static software.amazon.awssdk.services.kinesis.model.ShardIteratorType.AFTER_SEQUENCE_NUMBER;
 import static software.amazon.awssdk.services.kinesis.model.ShardIteratorType.AT_SEQUENCE_NUMBER;
 import static software.amazon.awssdk.services.kinesis.model.ShardIteratorType.AT_TIMESTAMP;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.STREAM_INITIAL_TIMESTAMP;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.STREAM_TIMESTAMP_DATE_FORMAT;
+import static software.amazon.kinesis.connectors.flink.internals.ShardConsumerTestUtils.fakeSequenceNumber;
+import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber.SENTINEL_AT_TIMESTAMP_SEQUENCE_NUM;
+import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber.SENTINEL_LATEST_SEQUENCE_NUM;
+import static software.amazon.kinesis.connectors.flink.testutils.TestUtils.efoProperties;
 
 /**
  * Tests for the {@link ShardConsumer} using Fan Out consumption mocked Kinesis behaviours.
@@ -47,9 +52,9 @@ public class ShardConsumerFanOutTest {
 
 	@Test
 	public void testEmptyShard() throws Exception {
-		FakeKinesisFanOutBehavioursFactory.SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.emptyShard();
+		SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.emptyShard();
 
-		assertNumberOfMessagesReceivedFromKinesis(0, kinesis, ShardConsumerTestUtils.fakeSequenceNumber());
+		assertNumberOfMessagesReceivedFromKinesis(0, kinesis, fakeSequenceNumber());
 
 		assertEquals(1, kinesis.getNumberOfSubscribeToShardInvocations());
 	}
@@ -57,11 +62,11 @@ public class ShardConsumerFanOutTest {
 	@Test
 	public void testStartFromLatestIsTranslatedToTimestamp() throws Exception {
 		Instant now = Instant.now();
-		FakeKinesisFanOutBehavioursFactory.SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.boundedShard().build();
-		SequenceNumber sequenceNumber = SentinelSequenceNumber.SENTINEL_LATEST_SEQUENCE_NUM.get();
+		SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.boundedShard().build();
+		SequenceNumber sequenceNumber = SENTINEL_LATEST_SEQUENCE_NUM.get();
 
 		// Fake behaviour defaults to 10 messages
-		assertNumberOfMessagesReceivedFromKinesis(10, kinesis, sequenceNumber, TestUtils.efoProperties());
+		assertNumberOfMessagesReceivedFromKinesis(10, kinesis, sequenceNumber, efoProperties());
 
 		StartingPosition actual = kinesis.getStartingPositionForSubscription(0);
 		assertEquals(AT_TIMESTAMP, actual.type());
@@ -70,12 +75,12 @@ public class ShardConsumerFanOutTest {
 
 	@Test
 	public void testStartFromLatestReceivesNoRecordsContinuesToUseTimestamp() throws Exception {
-		FakeKinesisFanOutBehavioursFactory.AbstractSingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.emptyBatchFollowedBySingleRecord();
+		AbstractSingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.emptyBatchFollowedBySingleRecord();
 
-		SequenceNumber sequenceNumber = SentinelSequenceNumber.SENTINEL_LATEST_SEQUENCE_NUM.get();
+		SequenceNumber sequenceNumber = SENTINEL_LATEST_SEQUENCE_NUM.get();
 
 		// Fake behaviour defaults to 10 messages
-		assertNumberOfMessagesReceivedFromKinesis(1, kinesis, sequenceNumber, TestUtils.efoProperties());
+		assertNumberOfMessagesReceivedFromKinesis(1, kinesis, sequenceNumber, efoProperties());
 
 		// This fake Kinesis will give 2 subscriptions
 		assertEquals(2, kinesis.getNumberOfSubscribeToShardInvocations());
@@ -90,12 +95,12 @@ public class ShardConsumerFanOutTest {
 		String timestamp = "2020-07-02T09:14";
 		Instant expectedTimestamp = new SimpleDateFormat(format).parse(timestamp).toInstant();
 
-		FakeKinesisFanOutBehavioursFactory.SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.boundedShard().build();
+		SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory.boundedShard().build();
 
-		Properties consumerConfig = TestUtils.efoProperties();
-		consumerConfig.setProperty(ConsumerConfigConstants.STREAM_INITIAL_TIMESTAMP, timestamp);
-		consumerConfig.setProperty(ConsumerConfigConstants.STREAM_TIMESTAMP_DATE_FORMAT, format);
-		SequenceNumber sequenceNumber = SentinelSequenceNumber.SENTINEL_AT_TIMESTAMP_SEQUENCE_NUM.get();
+		Properties consumerConfig = efoProperties();
+		consumerConfig.setProperty(STREAM_INITIAL_TIMESTAMP, timestamp);
+		consumerConfig.setProperty(STREAM_TIMESTAMP_DATE_FORMAT, format);
+		SequenceNumber sequenceNumber = SENTINEL_AT_TIMESTAMP_SEQUENCE_NUM.get();
 
 		// Fake behaviour defaults to 10 messages
 		assertNumberOfMessagesReceivedFromKinesis(10, kinesis, sequenceNumber, consumerConfig);
@@ -107,34 +112,34 @@ public class ShardConsumerFanOutTest {
 
 	@Test
 	public void testMillisBehindReported() throws Exception {
-		FakeKinesisFanOutBehavioursFactory.SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory
+		SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory
 			.boundedShard()
 			.withMillisBehindLatest(123L)
 			.build();
 
 		// Fake behaviour defaults to 10 messages
-		ShardConsumerMetricsReporter metrics = assertNumberOfMessagesReceivedFromKinesis(10, kinesis, ShardConsumerTestUtils.fakeSequenceNumber());
+		ShardConsumerMetricsReporter metrics = assertNumberOfMessagesReceivedFromKinesis(10, kinesis, fakeSequenceNumber());
 
 		assertEquals(123L, metrics.getMillisBehindLatest());
 	}
 
 	@Test
 	public void testBoundedShardConsumesCorrectNumberOfMessages() throws Exception {
-		FakeKinesisFanOutBehavioursFactory.SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory
+		SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory
 			.boundedShard()
 			.withBatchCount(10)
 			.withRecordsPerBatch(5)
 			.build();
 
 		// 10 batches of 5 records = 50
-		assertNumberOfMessagesReceivedFromKinesis(50, kinesis, ShardConsumerTestUtils.fakeSequenceNumber());
+		assertNumberOfMessagesReceivedFromKinesis(50, kinesis, fakeSequenceNumber());
 
 		assertEquals(1, kinesis.getNumberOfSubscribeToShardInvocations());
 	}
 
 	@Test
 	public void testBoundedShardResubscribesToShard() throws Exception {
-		FakeKinesisFanOutBehavioursFactory.SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory
+		SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory
 			.boundedShard()
 			.withBatchCount(100)
 			.withRecordsPerBatch(10)
@@ -142,7 +147,7 @@ public class ShardConsumerFanOutTest {
 			.build();
 
 		// 100 batches of 10 records = 1000
-		assertNumberOfMessagesReceivedFromKinesis(1000, kinesis, ShardConsumerTestUtils.fakeSequenceNumber());
+		assertNumberOfMessagesReceivedFromKinesis(1000, kinesis, fakeSequenceNumber());
 
 		// 100 batches / 5 batches per subscription = 20 subscriptions
 		assertEquals(20, kinesis.getNumberOfSubscribeToShardInvocations());
@@ -153,7 +158,7 @@ public class ShardConsumerFanOutTest {
 
 	@Test
 	public void testBoundedShardWithAggregatedRecords() throws Exception {
-		FakeKinesisFanOutBehavioursFactory.SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory
+		SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory
 			.boundedShard()
 			.withBatchCount(100)
 			.withRecordsPerBatch(10)
@@ -161,12 +166,12 @@ public class ShardConsumerFanOutTest {
 			.build();
 
 		// 100 batches of 10 records * 100 aggregation factor = 100000
-		assertNumberOfMessagesReceivedFromKinesis(100000, kinesis, ShardConsumerTestUtils.fakeSequenceNumber());
+		assertNumberOfMessagesReceivedFromKinesis(100000, kinesis, fakeSequenceNumber());
 	}
 
 	@Test
 	public void testBoundedShardResumingConsumptionFromAggregatedSubsequenceNumber() throws Exception {
-		FakeKinesisFanOutBehavioursFactory.SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory
+		SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory
 			.boundedShard()
 			.withBatchCount(10)
 			.withRecordsPerBatch(1)
@@ -184,7 +189,7 @@ public class ShardConsumerFanOutTest {
 
 	@Test
 	public void testSubscribeToShardUsesCorrectStartingSequenceNumbers() throws Exception {
-		FakeKinesisFanOutBehavioursFactory.SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory
+		SingleShardFanOutKinesisV2 kinesis = FakeKinesisFanOutBehavioursFactory
 			.boundedShard()
 			.withBatchCount(10)
 			.withRecordsPerBatch(1)
@@ -220,7 +225,7 @@ public class ShardConsumerFanOutTest {
 			expectedNumberOfMessages,
 			kinesis,
 			startingSequenceNumber,
-			TestUtils.efoProperties());
+			efoProperties());
 	}
 
 	private ShardConsumerMetricsReporter assertNumberOfMessagesReceivedFromKinesis(

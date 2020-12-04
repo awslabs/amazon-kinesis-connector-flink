@@ -30,6 +30,7 @@ import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.SystemPropertyCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.http.Protocol;
@@ -46,13 +47,21 @@ import software.amazon.awssdk.services.sts.StsClient;
 import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider;
 import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
 import software.amazon.kinesis.connectors.flink.config.AWSConfigConstants;
-import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants;
+import software.amazon.kinesis.connectors.flink.config.AWSConfigConstants.CredentialProvider;
 
 import java.net.URI;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.Properties;
+
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DEFAULT_EFO_HTTP_CLIENT_MAX_CONURRENCY;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFORegistrationType.EAGER;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFORegistrationType.NONE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_HTTP_CLIENT_MAX_CONCURRENCY;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_REGISTRATION_TYPE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RECORD_PUBLISHER_TYPE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RecordPublisherType.EFO;
 
 /**
  * Utility methods specific to Amazon Web Service SDK v2.x.
@@ -90,9 +99,9 @@ public class AwsV2Util {
 			final Properties consumerConfig) {
 
 		int maxConcurrency = Optional
-			.ofNullable(consumerConfig.getProperty(ConsumerConfigConstants.EFO_HTTP_CLIENT_MAX_CONCURRENCY))
+			.ofNullable(consumerConfig.getProperty(EFO_HTTP_CLIENT_MAX_CONCURRENCY))
 			.map(Integer::parseInt)
-			.orElse(ConsumerConfigConstants.DEFAULT_EFO_HTTP_CLIENT_MAX_CONURRENCY);
+			.orElse(DEFAULT_EFO_HTTP_CLIENT_MAX_CONURRENCY);
 
 		httpClientBuilder
 			.maxConcurrency(maxConcurrency)
@@ -166,7 +175,7 @@ public class AwsV2Util {
 	}
 
 	private static AwsCredentialsProvider getCredentialsProvider(final Properties configProps, final String configPrefix) {
-		AWSConfigConstants.CredentialProvider credentialProviderType = AWSUtil.getCredentialProviderType(configProps, configPrefix);
+		CredentialProvider credentialProviderType = AWSUtil.getCredentialProviderType(configProps, configPrefix);
 
 		switch (credentialProviderType) {
 			case ENV_VAR:
@@ -185,6 +194,9 @@ public class AwsV2Util {
 
 			case ASSUME_ROLE:
 				return getAssumeRoleCredentialProvider(configProps, configPrefix);
+
+			case WEB_IDENTITY_TOKEN:
+				return getWebIdentityTokenFileCredentialsProvider(WebIdentityTokenFileCredentialsProvider.builder(), configProps, configPrefix);
 
 			case AUTO:
 				return DefaultCredentialsProvider.create();
@@ -230,6 +242,23 @@ public class AwsV2Util {
 			.build();
 	}
 
+	@VisibleForTesting
+	static AwsCredentialsProvider getWebIdentityTokenFileCredentialsProvider(
+			final WebIdentityTokenFileCredentialsProvider.Builder webIdentityBuilder,
+			final Properties configProps,
+			final String configPrefix) {
+
+		webIdentityBuilder
+			.roleArn(configProps.getProperty(AWSConfigConstants.roleArn(configPrefix), null))
+			.roleSessionName(configProps.getProperty(AWSConfigConstants.roleSessionName(configPrefix), null));
+
+		Optional.ofNullable(configProps.getProperty(AWSConfigConstants.webIdentityTokenFile(configPrefix), null))
+			.map(Paths::get)
+			.ifPresent(webIdentityBuilder::webIdentityTokenFile);
+
+		return webIdentityBuilder.build();
+	}
+
 	/**
 	 * Creates a {@link Region} object from the given Properties.
 	 *
@@ -246,11 +275,11 @@ public class AwsV2Util {
 	}
 
 	public static boolean isUsingEfoRecordPublisher(final Properties properties) {
-		return ConsumerConfigConstants.RecordPublisherType.EFO.name().equals(properties.get(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE));
+		return EFO.name().equals(properties.get(RECORD_PUBLISHER_TYPE));
 	}
 
 	public static boolean isEagerEfoRegistrationType(final Properties properties) {
-		return ConsumerConfigConstants.EFORegistrationType.EAGER.name().equals(properties.get(ConsumerConfigConstants.EFO_REGISTRATION_TYPE));
+		return EAGER.name().equals(properties.get(EFO_REGISTRATION_TYPE));
 	}
 
 	public static boolean isLazyEfoRegistrationType(final Properties properties) {
@@ -259,7 +288,7 @@ public class AwsV2Util {
 	}
 
 	public static boolean isNoneEfoRegistrationType(final Properties properties) {
-		return ConsumerConfigConstants.EFORegistrationType.NONE.name().equals(properties.get(ConsumerConfigConstants.EFO_REGISTRATION_TYPE));
+		return NONE.name().equals(properties.get(EFO_REGISTRATION_TYPE));
 	}
 
 }

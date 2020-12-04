@@ -23,12 +23,14 @@ import org.apache.flink.annotation.Internal;
 
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.kinesis.producer.KinesisProducerConfiguration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import software.amazon.kinesis.connectors.flink.FlinkKinesisConsumer;
 import software.amazon.kinesis.connectors.flink.FlinkKinesisProducer;
 import software.amazon.kinesis.connectors.flink.config.AWSConfigConstants;
+import software.amazon.kinesis.connectors.flink.config.AWSConfigConstants.CredentialProvider;
 import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants;
+import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFORegistrationType;
+import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.InitialPosition;
+import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RecordPublisherType;
 import software.amazon.kinesis.connectors.flink.config.ProducerConfigConstants;
 
 import java.text.ParseException;
@@ -45,6 +47,9 @@ import java.util.stream.Collectors;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DEFAULT_STREAM_TIMESTAMP_DATE_FORMAT;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.STREAM_INITIAL_TIMESTAMP;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.STREAM_TIMESTAMP_DATE_FORMAT;
 
 /**
  * Utilities for Flink Kinesis connector configuration.
@@ -94,8 +99,6 @@ public class KinesisConfigUtil {
 	 **/
 	protected static final int DEFAULT_THREAD_POOL_SIZE = 10;
 
-	private static final Logger LOG = LoggerFactory.getLogger(KinesisConfigUtil.class);
-
 	/**
 	 * Validate configuration properties for {@link FlinkKinesisConsumer}.
 	 */
@@ -111,9 +114,9 @@ public class KinesisConfigUtil {
 
 		validateAwsConfiguration(config);
 
-		ConsumerConfigConstants.RecordPublisherType recordPublisherType = validateRecordPublisherType(config);
+		RecordPublisherType recordPublisherType = validateRecordPublisherType(config);
 
-		if (recordPublisherType == ConsumerConfigConstants.RecordPublisherType.EFO) {
+		if (recordPublisherType == RecordPublisherType.EFO) {
 			validateEfoConfiguration(config, streams);
 		}
 
@@ -128,22 +131,22 @@ public class KinesisConfigUtil {
 
 			// specified initial position in stream must be either LATEST, TRIM_HORIZON or AT_TIMESTAMP
 			try {
-				ConsumerConfigConstants.InitialPosition.valueOf(initPosType);
+				InitialPosition.valueOf(initPosType);
 			} catch (IllegalArgumentException e) {
-				String errorMessage = Arrays.stream(ConsumerConfigConstants.InitialPosition.values())
+				String errorMessage = Arrays.stream(InitialPosition.values())
 					.map(Enum::name).collect(Collectors.joining(", "));
 				throw new IllegalArgumentException("Invalid initial position in stream set in config. Valid values are: " + errorMessage);
 			}
 
 			// specified initial timestamp in stream when using AT_TIMESTAMP
-			if (ConsumerConfigConstants.InitialPosition.valueOf(initPosType) == ConsumerConfigConstants.InitialPosition.AT_TIMESTAMP) {
-				if (!config.containsKey(ConsumerConfigConstants.STREAM_INITIAL_TIMESTAMP)) {
+			if (InitialPosition.valueOf(initPosType) == InitialPosition.AT_TIMESTAMP) {
+				if (!config.containsKey(STREAM_INITIAL_TIMESTAMP)) {
 					throw new IllegalArgumentException("Please set value for initial timestamp ('"
-						+ ConsumerConfigConstants.STREAM_INITIAL_TIMESTAMP + "') when using AT_TIMESTAMP initial position.");
+						+ STREAM_INITIAL_TIMESTAMP + "') when using AT_TIMESTAMP initial position.");
 				}
 				validateOptionalDateProperty(config,
-					ConsumerConfigConstants.STREAM_INITIAL_TIMESTAMP,
-					config.getProperty(ConsumerConfigConstants.STREAM_TIMESTAMP_DATE_FORMAT, ConsumerConfigConstants.DEFAULT_STREAM_TIMESTAMP_DATE_FORMAT),
+					STREAM_INITIAL_TIMESTAMP,
+					config.getProperty(STREAM_TIMESTAMP_DATE_FORMAT, DEFAULT_STREAM_TIMESTAMP_DATE_FORMAT),
 					"Invalid value given for initial timestamp for AT_TIMESTAMP initial position in stream. "
 						+ "Must be a valid format: yyyy-MM-dd'T'HH:mm:ss.SSSXXX or non-negative double value. For example, 2016-04-04T19:58:46.480-00:00 or 1459799926.480 .");
 			}
@@ -262,20 +265,20 @@ public class KinesisConfigUtil {
 	 * @param config config properties
 	 * @return if {@code ConsumerConfigConstants.RECORD_PUBLISHER_TYPE} is set, return the parsed record publisher type. Else return polling record publisher type.
 	 */
-	public static ConsumerConfigConstants.RecordPublisherType validateRecordPublisherType(Properties config) {
+	public static RecordPublisherType validateRecordPublisherType(Properties config) {
 		if (config.containsKey(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE)) {
 			String recordPublisherType = config.getProperty(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE);
 
 			// specified record publisher type in stream must be either EFO or POLLING
 			try {
-				return ConsumerConfigConstants.RecordPublisherType.valueOf(recordPublisherType);
+				return RecordPublisherType.valueOf(recordPublisherType);
 			} catch (IllegalArgumentException e) {
-				String errorMessage = Arrays.stream(ConsumerConfigConstants.RecordPublisherType.values())
+				String errorMessage = Arrays.stream(RecordPublisherType.values())
 					.map(Enum::name).collect(Collectors.joining(", "));
 				throw new IllegalArgumentException("Invalid record publisher type in stream set in config. Valid values are: " + errorMessage);
 			}
 		} else {
-			return ConsumerConfigConstants.RecordPublisherType.POLLING;
+			return RecordPublisherType.POLLING;
 		}
 	}
 
@@ -285,21 +288,21 @@ public class KinesisConfigUtil {
 	 * @param streams the streams which is sent to match the EFO consumer arn if the EFO registration mode is set to `NONE`.
 	 */
 	public static void validateEfoConfiguration(Properties config, List<String> streams) {
-		ConsumerConfigConstants.EFORegistrationType efoRegistrationType;
+		EFORegistrationType efoRegistrationType;
 		if (config.containsKey(ConsumerConfigConstants.EFO_REGISTRATION_TYPE)) {
 			String typeInString = config.getProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE);
 			// specified efo registration type in stream must be either LAZY, EAGER or NONE.
 			try {
-				efoRegistrationType = ConsumerConfigConstants.EFORegistrationType.valueOf(typeInString);
+				efoRegistrationType = EFORegistrationType.valueOf(typeInString);
 			} catch (IllegalArgumentException e) {
-				String errorMessage = Arrays.stream(ConsumerConfigConstants.EFORegistrationType.values())
+				String errorMessage = Arrays.stream(EFORegistrationType.values())
 					.map(Enum::name).collect(Collectors.joining(", "));
 				throw new IllegalArgumentException("Invalid efo registration type in stream set in config. Valid values are: " + errorMessage);
 			}
 		} else {
-			efoRegistrationType = ConsumerConfigConstants.EFORegistrationType.LAZY;
+			efoRegistrationType = EFORegistrationType.LAZY;
 		}
-		if (efoRegistrationType == ConsumerConfigConstants.EFORegistrationType.NONE) {
+		if (efoRegistrationType == EFORegistrationType.NONE) {
 			//if the registration type is NONE, then for each stream there must be an according consumer ARN
 			List<String> missingConsumerArnKeys = new ArrayList<>();
 			for (String stream : streams) {
@@ -327,6 +330,7 @@ public class KinesisConfigUtil {
 	 * Replace deprecated configuration properties for {@link FlinkKinesisProducer}.
 	 * This should be remove along with deprecated keys
 	 */
+	@SuppressWarnings("deprecation")
 	public static Properties replaceDeprecatedProducerKeys(Properties configProps) {
 		// Replace deprecated key
 		if (configProps.containsKey(ProducerConfigConstants.COLLECTION_MAX_COUNT)) {
@@ -357,6 +361,7 @@ public class KinesisConfigUtil {
 	 * @param configProps original config properties.
 	 * @return backfilled config properties.
 	 */
+	@SuppressWarnings("UnusedReturnValue")
 	public static Properties backfillConsumerKeys(Properties configProps) {
 		HashMap<String, String> oldKeyToNewKeys = new HashMap<>();
 		oldKeyToNewKeys.put(ConsumerConfigConstants.STREAM_DESCRIBE_BACKOFF_BASE, ConsumerConfigConstants.LIST_SHARDS_BACKOFF_BASE);
@@ -419,19 +424,19 @@ public class KinesisConfigUtil {
 			String credentialsProviderType = config.getProperty(AWSConfigConstants.AWS_CREDENTIALS_PROVIDER);
 
 			// value specified for AWSConfigConstants.AWS_CREDENTIALS_PROVIDER needs to be recognizable
-			AWSConfigConstants.CredentialProvider providerType;
+			CredentialProvider providerType;
 			try {
-				providerType = AWSConfigConstants.CredentialProvider.valueOf(credentialsProviderType);
+				providerType = CredentialProvider.valueOf(credentialsProviderType);
 			} catch (IllegalArgumentException e) {
 				StringBuilder sb = new StringBuilder();
-				for (AWSConfigConstants.CredentialProvider type : AWSConfigConstants.CredentialProvider.values()) {
+				for (CredentialProvider type : CredentialProvider.values()) {
 					sb.append(type.toString()).append(", ");
 				}
 				throw new IllegalArgumentException("Invalid AWS Credential Provider Type set in config. Valid values are: " + sb.toString());
 			}
 
 			// if BASIC type is used, also check that the Access Key ID and Secret Key is supplied
-			if (providerType == AWSConfigConstants.CredentialProvider.BASIC) {
+			if (providerType == CredentialProvider.BASIC) {
 				if (!config.containsKey(AWSConfigConstants.AWS_ACCESS_KEY_ID)
 					|| !config.containsKey(AWSConfigConstants.AWS_SECRET_ACCESS_KEY)) {
 					throw new IllegalArgumentException("Please set values for AWS Access Key ID ('" + AWSConfigConstants.AWS_ACCESS_KEY_ID + "') " +
@@ -459,10 +464,10 @@ public class KinesisConfigUtil {
 	 * @return the timestamp
 	 */
 	public static Date parseStreamTimestampStartingPosition(final Properties consumerConfig) {
-		String timestamp = consumerConfig.getProperty(ConsumerConfigConstants.STREAM_INITIAL_TIMESTAMP);
+		String timestamp = consumerConfig.getProperty(STREAM_INITIAL_TIMESTAMP);
 
 		try {
-			String format = consumerConfig.getProperty(ConsumerConfigConstants.STREAM_TIMESTAMP_DATE_FORMAT, ConsumerConfigConstants.DEFAULT_STREAM_TIMESTAMP_DATE_FORMAT);
+			String format = consumerConfig.getProperty(STREAM_TIMESTAMP_DATE_FORMAT, DEFAULT_STREAM_TIMESTAMP_DATE_FORMAT);
 			SimpleDateFormat customDateFormat = new SimpleDateFormat(format);
 			return customDateFormat.parse(timestamp);
 		} catch (IllegalArgumentException | NullPointerException exception) {

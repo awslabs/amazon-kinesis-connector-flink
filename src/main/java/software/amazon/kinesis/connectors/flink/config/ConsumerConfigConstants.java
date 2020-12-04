@@ -26,6 +26,8 @@ import software.amazon.kinesis.connectors.flink.FlinkKinesisConsumer;
 import software.amazon.kinesis.connectors.flink.internals.ShardConsumer;
 import software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber;
 
+import java.time.Duration;
+
 /**
  * Optional consumer specific configuration keys and default values for {@link FlinkKinesisConsumer}.
  */
@@ -269,7 +271,7 @@ public class ConsumerConfigConstants extends AWSConfigConstants {
 
 	public static final int DEFAULT_REGISTER_STREAM_RETRIES = 10;
 
-	public static final long DEFAULT_REGISTER_STREAM_TIMEOUT_SECONDS = 60;
+	public static final Duration DEFAULT_REGISTER_STREAM_TIMEOUT = Duration.ofSeconds(60);
 
 	public static final long DEFAULT_REGISTER_STREAM_BACKOFF_BASE = 500L;
 
@@ -279,7 +281,7 @@ public class ConsumerConfigConstants extends AWSConfigConstants {
 
 	public static final int DEFAULT_DEREGISTER_STREAM_RETRIES = 10;
 
-	public static final long DEFAULT_DEREGISTER_STREAM_TIMEOUT_SECONDS = 60;
+	public static final Duration DEFAULT_DEREGISTER_STREAM_TIMEOUT = Duration.ofSeconds(60);
 
 	public static final long DEFAULT_DEREGISTER_STREAM_BACKOFF_BASE = 500L;
 

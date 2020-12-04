@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
+import static software.amazon.kinesis.connectors.flink.testutils.TestUtils.createDummyStreamShardHandle;
 
 /**
  * Tests for {@link RecordBatch}.
@@ -47,7 +48,7 @@ public class RecordBatchTest {
 			record("2"),
 			record("3"),
 			record("4")
-		), TestUtils.createDummyStreamShardHandle(), 100L);
+		), createDummyStreamShardHandle(), 100L);
 
 		assertEquals(4, result.getAggregatedRecordSize());
 		assertEquals(4, result.getDeaggregatedRecordSize());
@@ -58,7 +59,7 @@ public class RecordBatchTest {
 	@Test
 	public void testDeaggregateRecordsWithAggregatedRecords() {
 		final List<Record> records = TestUtils.createAggregatedRecordBatch(5, 5, new AtomicInteger());
-		RecordBatch result = new RecordBatch(records, TestUtils.createDummyStreamShardHandle(), 100L);
+		RecordBatch result = new RecordBatch(records, createDummyStreamShardHandle(), 100L);
 
 		assertEquals(5, result.getAggregatedRecordSize());
 		assertEquals(25, result.getDeaggregatedRecordSize());
@@ -68,7 +69,7 @@ public class RecordBatchTest {
 
 	@Test
 	public void testGetAverageRecordSizeBytesEmptyList() {
-		RecordBatch result = new RecordBatch(emptyList(), TestUtils.createDummyStreamShardHandle(), 100L);
+		RecordBatch result = new RecordBatch(emptyList(), createDummyStreamShardHandle(), 100L);
 
 		assertEquals(0, result.getAggregatedRecordSize());
 		assertEquals(0, result.getDeaggregatedRecordSize());
@@ -77,7 +78,7 @@ public class RecordBatchTest {
 
 	@Test
 	public void testGetMillisBehindLatest() {
-		RecordBatch result = new RecordBatch(singletonList(record("1")), TestUtils.createDummyStreamShardHandle(), 100L);
+		RecordBatch result = new RecordBatch(singletonList(record("1")), createDummyStreamShardHandle(), 100L);
 
 		assertEquals(Long.valueOf(100), result.getMillisBehindLatest());
 	}

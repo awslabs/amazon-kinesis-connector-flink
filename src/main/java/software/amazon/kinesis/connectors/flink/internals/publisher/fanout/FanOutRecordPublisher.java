@@ -46,6 +46,8 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import static software.amazon.awssdk.services.kinesis.model.StartingPosition.builder;
+import static software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher.RecordPublisherRunResult.COMPLETE;
+import static software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher.RecordPublisherRunResult.INCOMPLETE;
 
 /**
  * A {@link RecordPublisher} that will read and forward records from Kinesis using EFO, to the subscriber.
@@ -138,13 +140,13 @@ public class FanOutRecordPublisher implements RecordPublisher {
 
 		try {
 			complete = fanOutShardSubscriber.subscribeToShardAndConsumeRecords(
-					toSdkV2StartingPosition(nextStartingPosition), eventConsumer);
+				toSdkV2StartingPosition(nextStartingPosition), eventConsumer);
 			attempt = 0;
 		} catch (RecoverableFanOutSubscriberException ex) {
 			// Recoverable errors should be reattempted without contributing to the retry policy
 			// A recoverable error would not result in the Flink job being cancelled
 			backoff(ex);
-			return RecordPublisherRunResult.INCOMPLETE;
+			return INCOMPLETE;
 		} catch (FanOutSubscriberException ex) {
 			// We have received an error from the network layer
 			// This can be due to limits being exceeded, network timeouts, etc
@@ -153,22 +155,22 @@ public class FanOutRecordPublisher implements RecordPublisher {
 				LOG.warn("Received ResourceNotFoundException. Either the shard does not exist, or the stream subscriber has been deregistered." +
 					"Marking this shard as complete {} ({})", subscribedShard.getShard().getShardId(), consumerArn);
 
-				return RecordPublisherRunResult.COMPLETE;
+				return COMPLETE;
 			}
 
 			if (attempt == configuration.getSubscribeToShardMaxRetries()) {
 				final String errorMessage = "Maximum reties exceeded for SubscribeToShard. " +
-						"Failed " + configuration.getSubscribeToShardMaxRetries() + " times.";
+					"Failed " + configuration.getSubscribeToShardMaxRetries() + " times.";
 				LOG.error(errorMessage, ex.getCause());
 				throw new RuntimeException(errorMessage, ex.getCause());
 			}
 
 			attempt++;
 			backoff(ex);
-			return RecordPublisherRunResult.INCOMPLETE;
+			return INCOMPLETE;
 		}
 
-		return complete ? RecordPublisherRunResult.COMPLETE : RecordPublisherRunResult.INCOMPLETE;
+		return complete ? COMPLETE : INCOMPLETE;
 	}
 
 	private void backoff(final Throwable ex) throws InterruptedException {
