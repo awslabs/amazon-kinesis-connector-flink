@@ -25,7 +25,7 @@ import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 
 import software.amazon.kinesis.connectors.flink.KinesisShardAssigner;
-import software.amazon.kinesis.connectors.flink.internals.publisher.polling.PollingRecordPublisher;
+import software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher;
 import software.amazon.kinesis.connectors.flink.internals.publisher.polling.PollingRecordPublisherFactory;
 import software.amazon.kinesis.connectors.flink.metrics.ShardConsumerMetricsReporter;
 import software.amazon.kinesis.connectors.flink.model.DynamoDBStreamsShardHandle;
@@ -121,16 +121,23 @@ public class DynamoDBStreamsDataFetcher<T> extends KinesisDataFetcher<T> {
 		SequenceNumber lastSeqNum,
 		MetricGroup metricGroup) throws InterruptedException {
 
-		StartingPosition startingPosition = StartingPosition.continueFromSequenceNumber(lastSeqNum);
-		PollingRecordPublisherFactory pollingRecordPublisherFactory = new PollingRecordPublisherFactory(flinkKinesisProxyFactory);
-		PollingRecordPublisher recordPublisher = pollingRecordPublisherFactory.create(startingPosition, getConsumerConfiguration(), metricGroup, handle);
-
 		return new ShardConsumer<T>(
 			this,
-				recordPublisher,
+				createRecordPublisher(lastSeqNum, getConsumerConfiguration(), metricGroup, handle),
 				subscribedShardStateIndex,
 				handle,
 				lastSeqNum,
 				new ShardConsumerMetricsReporter(metricGroup));
 	}
+
+	@Override
+	protected RecordPublisher createRecordPublisher(
+				SequenceNumber sequenceNumber,
+				Properties configProps, MetricGroup metricGroup,
+				StreamShardHandle subscribedShard) throws InterruptedException {
+		StartingPosition startingPosition = StartingPosition.continueFromSequenceNumber(sequenceNumber);
+		PollingRecordPublisherFactory pollingRecordPublisherFactory = new PollingRecordPublisherFactory(flinkKinesisProxyFactory);
+		return pollingRecordPublisherFactory.create(startingPosition, getConsumerConfiguration(), metricGroup, subscribedShard);
+	}
+
 }

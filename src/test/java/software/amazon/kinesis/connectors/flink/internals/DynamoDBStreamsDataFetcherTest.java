@@ -10,6 +10,8 @@ import software.amazon.kinesis.connectors.flink.serialization.KinesisDeserializa
 import software.amazon.kinesis.connectors.flink.testutils.TestSourceContext;
 import software.amazon.kinesis.connectors.flink.testutils.TestUtils;
 
+import java.util.Properties;
+
 import static com.amazonaws.services.kinesis.model.ShardIteratorType.LATEST;
 import static java.util.Collections.singletonList;
 import static org.mockito.Mockito.mock;
@@ -23,7 +25,7 @@ import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNum
 public class DynamoDBStreamsDataFetcherTest {
 
 	@Test
-	public void testCreateShardConsumerRespectsShardIteratorTypeLatest() throws Exception {
+	public void testCreateRecordPublisherRespectsShardIteratorTypeLatest() throws Exception {
 		RuntimeContext runtimeContext = TestUtils.getMockedRuntimeContext(1, 0);
 		KinesisProxyInterface kinesis = mock(KinesisProxyInterface.class);
 
@@ -38,7 +40,11 @@ public class DynamoDBStreamsDataFetcherTest {
 
 		StreamShardHandle dummyStreamShardHandle = TestUtils.createDummyStreamShardHandle("dummy-stream", "0");
 
-		fetcher.createShardConsumer(0, dummyStreamShardHandle, SENTINEL_LATEST_SEQUENCE_NUM.get(), runtimeContext.getMetricGroup());
+		fetcher.createRecordPublisher(
+				SENTINEL_LATEST_SEQUENCE_NUM.get(),
+				new Properties(),
+				runtimeContext.getMetricGroup(),
+				dummyStreamShardHandle);
 
 		verify(kinesis).getShardIterator(dummyStreamShardHandle, LATEST.toString(), null);
 	}
