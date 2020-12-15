@@ -19,12 +19,9 @@
 
 package software.amazon.kinesis.connectors.flink.testutils;
 
-import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.core.testutils.OneShotLatch;
-import org.apache.flink.metrics.groups.UnregisteredMetricsGroup;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 
-import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import software.amazon.kinesis.connectors.flink.internals.KinesisDataFetcher;
 import software.amazon.kinesis.connectors.flink.model.KinesisStreamShardState;
@@ -99,7 +96,7 @@ public class TestableKinesisDataFetcher<T> extends KinesisDataFetcher<T> {
 			fakeStreams,
 			sourceContext,
 			sourceContext.getCheckpointLock(),
-			getMockedRuntimeContext(fakeTotalCountOfSubtasks, fakeIndexOfThisSubtask),
+			TestUtils.getMockedRuntimeContext(fakeTotalCountOfSubtasks, fakeIndexOfThisSubtask),
 			fakeConfiguration,
 			deserializationSchema,
 			DEFAULT_SHARD_ASSIGNER,
@@ -168,19 +165,4 @@ public class TestableKinesisDataFetcher<T> extends KinesisDataFetcher<T> {
 		initialDiscoveryWaiter.await();
 	}
 
-	private static RuntimeContext getMockedRuntimeContext(final int fakeTotalCountOfSubtasks, final int fakeIndexOfThisSubtask) {
-		RuntimeContext mockedRuntimeContext = mock(RuntimeContext.class);
-
-		Mockito.when(mockedRuntimeContext.getNumberOfParallelSubtasks()).thenReturn(fakeTotalCountOfSubtasks);
-		Mockito.when(mockedRuntimeContext.getIndexOfThisSubtask()).thenReturn(fakeIndexOfThisSubtask);
-		Mockito.when(mockedRuntimeContext.getTaskName()).thenReturn("Fake Task");
-		Mockito.when(mockedRuntimeContext.getTaskNameWithSubtasks()).thenReturn(
-				"Fake Task (" + fakeIndexOfThisSubtask + "/" + fakeTotalCountOfSubtasks + ")");
-		Mockito.when(mockedRuntimeContext.getUserCodeClassLoader()).thenReturn(
-				Thread.currentThread().getContextClassLoader());
-
-		Mockito.when(mockedRuntimeContext.getMetricGroup()).thenReturn(new UnregisteredMetricsGroup());
-
-		return mockedRuntimeContext;
-	}
 }
