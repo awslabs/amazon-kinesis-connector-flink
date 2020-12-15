@@ -3,7 +3,8 @@
 ## Release 1.1.0 (TBD)
 * Migrate EFO consumers to use `DescribeStreamSummary` rather than `DescribeStream`. `DescribeStreamSummary` has a 
 higher TPS quota, resulting in reduced startup time for high parallelism sources. You may need add IAM permission for 
-`kinesis:DescribeStreamSummary` while upgrading to this version.   
+`kinesis:DescribeStreamSummary` while upgrading to this version 
+ ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/10))
 
 ## Release 1.0.4 (November 11th, 2020)
 * Fix issue when Polling consumer using timestamp with empty shard
