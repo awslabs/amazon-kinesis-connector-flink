@@ -86,7 +86,7 @@ Note the additional IAM permissions required to use EFO:
   "Sid": "Stream",
   "Effect": "Allow",
   "Action": [
-    "kinesis:DescribeStream",
+    "kinesis:DescribeStreamSummary",
     "kinesis:RegisterStreamConsumer",
     "kinesis:DeregisterStreamConsumer"
   ],
