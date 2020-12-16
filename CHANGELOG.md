@@ -10,6 +10,10 @@
 higher TPS quota, resulting in reduced startup time for high parallelism sources. You may need add IAM permission for 
 `kinesis:DescribeStreamSummary` while upgrading to this version 
  ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/10))
+ 
+* Fix issue preventing DynamoDB stream consumers to start from `LATEST` 
+  ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/11), 
+  [issue](https://github.com/awslabs/amazon-kinesis-connector-flink/issues/9))
 
 ## Release 1.0.4 (November 11th, 2020)
 * Fix issue when Polling consumer using timestamp with empty shard
