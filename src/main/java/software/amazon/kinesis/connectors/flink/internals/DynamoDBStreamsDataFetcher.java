@@ -19,14 +19,18 @@
 
 package software.amazon.kinesis.connectors.flink.internals;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 
 import software.amazon.kinesis.connectors.flink.KinesisShardAssigner;
-import software.amazon.kinesis.connectors.flink.metrics.ShardConsumerMetricsReporter;
+import software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher;
+import software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisherFactory;
+import software.amazon.kinesis.connectors.flink.internals.publisher.polling.PollingRecordPublisherFactory;
 import software.amazon.kinesis.connectors.flink.model.DynamoDBStreamsShardHandle;
 import software.amazon.kinesis.connectors.flink.model.SequenceNumber;
+import software.amazon.kinesis.connectors.flink.model.StartingPosition;
 import software.amazon.kinesis.connectors.flink.model.StreamShardHandle;
 import software.amazon.kinesis.connectors.flink.proxy.DynamoDBStreamsProxy;
 import software.amazon.kinesis.connectors.flink.serialization.KinesisDeserializationSchema;
@@ -41,7 +45,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * @param <T> type of fetched data.
  */
 public class DynamoDBStreamsDataFetcher<T> extends KinesisDataFetcher<T> {
-	private boolean shardIdFormatCheck = false;
+	private final RecordPublisherFactory recordPublisherFactory;
 
 	/**
 	 * Constructor.
@@ -54,27 +58,39 @@ public class DynamoDBStreamsDataFetcher<T> extends KinesisDataFetcher<T> {
 	 * @param shardAssigner shard assigner
 	 */
 	public DynamoDBStreamsDataFetcher(List<String> streams,
-		SourceFunction.SourceContext<T> sourceContext,
-		RuntimeContext runtimeContext,
-		Properties configProps,
-		KinesisDeserializationSchema<T> deserializationSchema,
-		KinesisShardAssigner shardAssigner) {
+			SourceFunction.SourceContext<T> sourceContext,
+			RuntimeContext runtimeContext,
+			Properties configProps,
+			KinesisDeserializationSchema<T> deserializationSchema,
+			KinesisShardAssigner shardAssigner) {
 
+		this(streams, sourceContext, runtimeContext, configProps, deserializationSchema, shardAssigner, DynamoDBStreamsProxy::create);
+	}
+
+	@VisibleForTesting
+	DynamoDBStreamsDataFetcher(List<String> streams,
+			SourceFunction.SourceContext<T> sourceContext,
+			RuntimeContext runtimeContext,
+			Properties configProps,
+			KinesisDeserializationSchema<T> deserializationSchema,
+			KinesisShardAssigner shardAssigner,
+			FlinkKinesisProxyFactory flinkKinesisProxyFactory) {
 		super(streams,
-			sourceContext,
-			sourceContext.getCheckpointLock(),
-			runtimeContext,
-			configProps,
-			deserializationSchema,
-			shardAssigner,
-			null,
-			null,
-			new AtomicReference<>(),
-			new ArrayList<>(),
-			createInitialSubscribedStreamsToLastDiscoveredShardsState(streams),
-			// use DynamoDBStreamsProxy
-			DynamoDBStreamsProxy::create,
-			null);
+				sourceContext,
+				sourceContext.getCheckpointLock(),
+				runtimeContext,
+				configProps,
+				deserializationSchema,
+				shardAssigner,
+				null,
+				null,
+				new AtomicReference<>(),
+				new ArrayList<>(),
+				createInitialSubscribedStreamsToLastDiscoveredShardsState(streams),
+				flinkKinesisProxyFactory,
+				null);
+
+		this.recordPublisherFactory = new PollingRecordPublisherFactory(flinkKinesisProxyFactory);
 	}
 
 	@Override
@@ -88,28 +104,13 @@ public class DynamoDBStreamsDataFetcher<T> extends KinesisDataFetcher<T> {
 		return true;
 	}
 
-	/**
-	 * Create a new DynamoDB streams shard consumer.
-	 *
-	 * @param subscribedShardStateIndex the state index of the shard this consumer is subscribed to
-	 * @param handle stream handle
-	 * @param lastSeqNum last sequence number
-	 * @param metricGroup the metric group to report metrics to
-	 * @return
-	 */
 	@Override
-	protected ShardConsumer<T> createShardConsumer(
-		Integer subscribedShardStateIndex,
-		StreamShardHandle handle,
-		SequenceNumber lastSeqNum,
-		MetricGroup metricGroup) throws InterruptedException {
-
-		return new ShardConsumer<T>(
-			this,
-			createRecordPublisher(lastSeqNum, getConsumerConfiguration(), metricGroup, handle),
-			subscribedShardStateIndex,
-			handle,
-			lastSeqNum,
-			new ShardConsumerMetricsReporter(metricGroup));
+	protected RecordPublisher createRecordPublisher(
+				SequenceNumber sequenceNumber,
+				Properties configProps, MetricGroup metricGroup,
+				StreamShardHandle subscribedShard) throws InterruptedException {
+		StartingPosition startingPosition = StartingPosition.continueFromSequenceNumber(sequenceNumber);
+		return recordPublisherFactory.create(startingPosition, getConsumerConfiguration(), metricGroup, subscribedShard);
 	}
+
 }

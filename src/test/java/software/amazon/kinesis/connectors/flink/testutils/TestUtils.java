@@ -19,7 +19,9 @@
 
 package software.amazon.kinesis.connectors.flink.testutils;
 
+import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.configuration.ConfigConstants;
+import org.apache.flink.metrics.groups.UnregisteredMetricsGroup;
 
 import com.amazonaws.kinesis.agg.AggRecord;
 import com.amazonaws.kinesis.agg.RecordAggregator;
@@ -30,6 +32,7 @@ import com.amazonaws.services.kinesis.model.SequenceNumberRange;
 import com.amazonaws.services.kinesis.model.Shard;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.mockito.Mockito;
 import software.amazon.kinesis.connectors.flink.config.AWSConfigConstants;
 import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants;
 import software.amazon.kinesis.connectors.flink.internals.publisher.RecordBatch;
@@ -45,6 +48,8 @@ import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.mockito.Mockito.mock;
 
 /**
  * General test utils.
@@ -131,6 +136,22 @@ public class TestUtils {
 		return consumerConfig;
 	}
 
+	public static RuntimeContext getMockedRuntimeContext(final int fakeTotalCountOfSubtasks, final int fakeIndexOfThisSubtask) {
+		RuntimeContext mockedRuntimeContext = mock(RuntimeContext.class);
+
+		Mockito.when(mockedRuntimeContext.getNumberOfParallelSubtasks()).thenReturn(fakeTotalCountOfSubtasks);
+		Mockito.when(mockedRuntimeContext.getIndexOfThisSubtask()).thenReturn(fakeIndexOfThisSubtask);
+		Mockito.when(mockedRuntimeContext.getTaskName()).thenReturn("Fake Task");
+		Mockito.when(mockedRuntimeContext.getTaskNameWithSubtasks()).thenReturn(
+				"Fake Task (" + fakeIndexOfThisSubtask + "/" + fakeTotalCountOfSubtasks + ")");
+		Mockito.when(mockedRuntimeContext.getUserCodeClassLoader()).thenReturn(
+				Thread.currentThread().getContextClassLoader());
+
+		Mockito.when(mockedRuntimeContext.getMetricGroup()).thenReturn(new UnregisteredMetricsGroup());
+
+		return mockedRuntimeContext;
+	}
+
 	/**
 	 * A test record consumer used to capture messages from kinesis.
 	 */
@@ -154,4 +175,5 @@ public class TestUtils {
 			return recordBatches;
 		}
 	}
+
 }
