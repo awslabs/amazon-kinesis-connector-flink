@@ -54,9 +54,9 @@ Other versions of Flink may work, but are not officially supported.
 
 ## Support
 
-We will support this connector until end of Q1 2021, or until KDA supports an Apache Flink Kinesis connector with EFO support, whichever is later. 
+We will support this connector until KDA adds support for Apache Flink 1.12. 
 Beyond this, we will not maintain patching or security for this repo.
-The Apache Flink Kinesis connector should be used instead of this library once KDA supports an EFO enabled version.
+The Apache Flink Kinesis connector should be used instead of this library where possible.
 
 ## Using EFO
 
