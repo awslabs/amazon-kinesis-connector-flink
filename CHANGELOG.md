@@ -1,6 +1,6 @@
 # Changelog
 
-## Release 1.1.0 (TBD)
+## Release 1.1.0 (December 22nd, 2020)
 * Migrate EFO consumers to use `DescribeStreamSummary` rather than `DescribeStream`. `DescribeStreamSummary` has a 
 higher TPS quota, resulting in reduced startup time for high parallelism sources. You may need add IAM permission for 
 `kinesis:DescribeStreamSummary` while upgrading to this version 
