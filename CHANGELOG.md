@@ -1,6 +1,6 @@
 # Changelog
 
-## Release 2.0.0 (TBD)
+## Release 2.0.0 (December 22nd, 2020)
 * Add KDS connector support in the Table API and SQL layer.
   ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/6))
 

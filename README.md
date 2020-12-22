@@ -17,11 +17,21 @@ Both features are already available in the official Apache Flink connector for F
 You no longer need to build the Kinesis Connector from source. 
 Add the following dependency to your project to start using the connector.
 
+### For Flink 1.8
 ```xml
 <dependency>
     <groupId>software.amazon.kinesis</groupId>
     <artifactId>amazon-kinesis-connector-flink</artifactId>
     <version>1.1.0</version>
+</dependency>
+```  
+
+### For Flink 1.11
+```xml
+<dependency>
+    <groupId>software.amazon.kinesis</groupId>
+    <artifactId>amazon-kinesis-connector-flink</artifactId>
+    <version>2.0.0</version>
 </dependency>
 ```  
 
