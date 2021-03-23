@@ -215,7 +215,9 @@ public class FanOutShardSubscriber {
 		LOG.warn("Error occurred on EFO subscription: {} - ({}).  {} ({})",
 			throwable.getClass().getName(), throwable.getMessage(), shardId, consumerArn, cause);
 
-		if (cause instanceof ReadTimeoutException) {
+		if (isInterrupted(throwable)) {
+			throw new FanOutSubscriberInterruptedException(throwable);
+		} else if (cause instanceof ReadTimeoutException) {
 			// ReadTimeoutException occurs naturally under backpressure scenarios when full batches take longer to
 			// process than standard read timeout (default 30s). Recoverable exceptions are intended to be retried
 			// indefinitely to avoid system degradation under backpressure. The EFO connection (subscription) to Kinesis
@@ -224,6 +226,19 @@ public class FanOutShardSubscriber {
 		} else {
 			throw new RetryableFanOutSubscriberException(cause);
 		}
+	}
+
+	private boolean isInterrupted(final Throwable throwable) {
+		Throwable cause = throwable;
+		while (cause != null) {
+			if (cause instanceof InterruptedException) {
+				return true;
+			}
+
+			cause = cause.getCause();
+		}
+
+		return false;
 	}
 
 	/**
@@ -254,7 +269,7 @@ public class FanOutShardSubscriber {
 			}
 
 			if (subscriptionEvent == null) {
-				LOG.debug("Timed out polling events from network, reacquiring subscription - {} ({})", shardId, consumerArn);
+				LOG.info("Timed out polling events from network, reacquiring subscription - {} ({})", shardId, consumerArn);
 				return false;
 			} else if (subscriptionEvent.isSubscribeToShardEvent()) {
 				SubscribeToShardEvent event = subscriptionEvent.getSubscribeToShardEvent();
@@ -400,6 +415,18 @@ public class FanOutShardSubscriber {
 		private static final long serialVersionUID = -3223347557038294482L;
 
 		public RecoverableFanOutSubscriberException(Throwable cause) {
+			super(cause);
+		}
+	}
+
+	/**
+	 * An exception wrapper to indicate the subscriber has been interrupted.
+	 */
+	static class FanOutSubscriberInterruptedException extends FanOutSubscriberException {
+
+		private static final long serialVersionUID = -2783477408630427189L;
+
+		public FanOutSubscriberInterruptedException(Throwable cause) {
 			super(cause);
 		}
 	}

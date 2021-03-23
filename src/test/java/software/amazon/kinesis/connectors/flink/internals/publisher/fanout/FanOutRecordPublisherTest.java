@@ -19,6 +19,7 @@
 
 package software.amazon.kinesis.connectors.flink.internals.publisher.fanout;
 
+import com.amazonaws.http.timers.client.SdkInterruptedException;
 import com.amazonaws.services.kinesis.clientlibrary.types.UserRecord;
 import io.netty.handler.timeout.ReadTimeoutException;
 import org.hamcrest.Matchers;
@@ -32,6 +33,7 @@ import software.amazon.awssdk.services.kinesis.model.ResourceNotFoundException;
 import software.amazon.awssdk.services.kinesis.model.SubscribeToShardEvent;
 import software.amazon.kinesis.connectors.flink.internals.publisher.RecordBatch;
 import software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher;
+import software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher.RecordPublisherRunResult;
 import software.amazon.kinesis.connectors.flink.model.SequenceNumber;
 import software.amazon.kinesis.connectors.flink.model.StartingPosition;
 import software.amazon.kinesis.connectors.flink.proxy.FullJitterBackoff;
@@ -73,6 +75,7 @@ import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigCons
 import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_BACKOFF_EXPONENTIAL_CONSTANT;
 import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_BACKOFF_MAX;
 import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_RETRIES;
+import static software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher.RecordPublisherRunResult.CANCELLED;
 import static software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher.RecordPublisherRunResult.COMPLETE;
 import static software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher.RecordPublisherRunResult.INCOMPLETE;
 import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber.SENTINEL_EARLIEST_SEQUENCE_NUM;
@@ -296,7 +299,7 @@ public class FanOutRecordPublisherTest {
 		FanOutRecordPublisher recordPublisher = new FanOutRecordPublisher(latest(), "arn", createDummyStreamShardHandle(), kinesis, configuration, backoff);
 
 		int count = 0;
-		while (recordPublisher.run(new TestConsumer()) == RecordPublisher.RecordPublisherRunResult.INCOMPLETE) {
+		while (recordPublisher.run(new TestConsumer()) == RecordPublisherRunResult.INCOMPLETE) {
 			if (++count > EXPECTED_SUBSCRIBE_TO_SHARD_RETRIES) {
 				break;
 			}
@@ -417,6 +420,16 @@ public class FanOutRecordPublisherTest {
 				subsequence = 0;
 			}
 		}
+	}
+
+	@Test
+	public void testInterruptedPublisherReturnsCancelled() throws Exception {
+		KinesisProxyV2Interface kinesis = FakeKinesisFanOutBehavioursFactory.errorDuringSubscription(new SdkInterruptedException(null));
+
+		RecordPublisher publisher = createRecordPublisher(kinesis, StartingPosition.continueFromSequenceNumber(SEQUENCE_NUMBER));
+		RecordPublisherRunResult actual = publisher.run(new TestConsumer());
+
+		assertEquals(CANCELLED, actual);
 	}
 
 	private List<UserRecord> flattenToUserRecords(final List<RecordBatch> recordBatch) {

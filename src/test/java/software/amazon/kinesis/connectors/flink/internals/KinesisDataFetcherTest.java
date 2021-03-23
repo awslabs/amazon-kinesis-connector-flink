@@ -57,6 +57,7 @@ import software.amazon.kinesis.connectors.flink.testutils.TestableKinesisDataFet
 import software.amazon.kinesis.connectors.flink.testutils.TestableKinesisDataFetcherForShardConsumerException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -70,6 +71,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
@@ -90,27 +92,25 @@ import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigCons
  */
 public class KinesisDataFetcherTest extends TestLogger {
 
+	@Test
+	public void testIsRunning() {
+		KinesisDataFetcher<String> fetcher = createTestDataFetcherWithNoShards(10, 2, "test-stream");
+
+		assertTrue(fetcher.isRunning());
+	}
+
+	@Test
+	public void testIsRunningFalseAfterShutDown() {
+		KinesisDataFetcher<String> fetcher = createTestDataFetcherWithNoShards(10, 2, "test-stream");
+
+		fetcher.shutdownFetcher();
+
+		assertFalse(fetcher.isRunning());
+	}
+
 	@Test(expected = RuntimeException.class)
 	public void testIfNoShardsAreFoundShouldThrowException() throws Exception {
-		List<String> fakeStreams = new LinkedList<>();
-		fakeStreams.add("fakeStream1");
-		fakeStreams.add("fakeStream2");
-
-		HashMap<String, String> subscribedStreamsToLastSeenShardIdsUnderTest =
-			KinesisDataFetcher.createInitialSubscribedStreamsToLastDiscoveredShardsState(fakeStreams);
-
-		TestableKinesisDataFetcher<String> fetcher =
-			new TestableKinesisDataFetcher<>(
-				fakeStreams,
-				new TestSourceContext<>(),
-				TestUtils.getStandardProperties(),
-				new KinesisDeserializationSchemaWrapper<>(new SimpleStringSchema()),
-				10,
-				2,
-				new AtomicReference<>(),
-				new LinkedList<>(),
-				subscribedStreamsToLastSeenShardIdsUnderTest,
-				FakeKinesisBehavioursFactory.noShardsFoundForRequestedStreamsBehaviour());
+		KinesisDataFetcher<String> fetcher = createTestDataFetcherWithNoShards(10, 2, "fakeStream1", "fakeStream2");
 
 		fetcher.runFetcher(); // this should throw RuntimeException
 	}
@@ -802,7 +802,7 @@ public class KinesisDataFetcherTest extends TestLogger {
 		Assert.assertEquals(record1, sourceContext.getCollectedOutputs().poll());
 
 		fetcher.emitWatermark();
-		Assert.assertTrue("potential watermark equals previous watermark", watermarks.isEmpty());
+		assertTrue("potential watermark equals previous watermark", watermarks.isEmpty());
 
 		StreamRecord<String> record2 = new StreamRecord<>(String.valueOf(1), 1);
 		fetcher.emitRecordAndUpdateState(record2.getValue(), record2.getTimestamp(), shardIndex, seq);
@@ -819,13 +819,13 @@ public class KinesisDataFetcherTest extends TestLogger {
 		clock.add(idleTimeout + 1);
 		fetcher.emitWatermark();
 		Assert.assertFalse("not idle", isTemporaryIdle.booleanValue());
-		Assert.assertTrue("not idle, no new watermark", watermarks.isEmpty());
+		assertTrue("not idle, no new watermark", watermarks.isEmpty());
 
 		// activate idle timeout
 		Whitebox.setInternalState(fetcher, "shardIdleIntervalMillis", idleTimeout);
 		fetcher.emitWatermark();
-		Assert.assertTrue("idle", isTemporaryIdle.booleanValue());
-		Assert.assertTrue("idle, no watermark", watermarks.isEmpty());
+		assertTrue("idle", isTemporaryIdle.booleanValue());
+		assertTrue("idle, no watermark", watermarks.isEmpty());
 	}
 
 	@Test
@@ -919,6 +919,26 @@ public class KinesisDataFetcherTest extends TestLogger {
 		fetcher.shutdownFetcher();
 
 		verify(kinesisV2).close();
+	}
+
+	private KinesisDataFetcher<String> createTestDataFetcherWithNoShards(
+			final int subtaskCount, final int subtaskIndex, final String...streams) {
+		List<String> streamList = Arrays.stream(streams).collect(Collectors.toList());
+
+		HashMap<String, String> subscribedStreamsToLastSeenShardIdsUnderTest =
+				KinesisDataFetcher.createInitialSubscribedStreamsToLastDiscoveredShardsState(streamList);
+
+		return new TestableKinesisDataFetcher<String>(
+				streamList,
+				new TestSourceContext<>(),
+				TestUtils.getStandardProperties(),
+				new KinesisDeserializationSchemaWrapper<String>(new SimpleStringSchema()),
+				subtaskCount,
+				subtaskIndex,
+				new AtomicReference<>(),
+				new LinkedList<>(),
+				subscribedStreamsToLastSeenShardIdsUnderTest,
+				FakeKinesisBehavioursFactory.noShardsFoundForRequestedStreamsBehaviour());
 	}
 
 }

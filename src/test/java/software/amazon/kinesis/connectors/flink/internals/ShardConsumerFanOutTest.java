@@ -19,6 +19,8 @@
 
 package software.amazon.kinesis.connectors.flink.internals;
 
+import com.amazonaws.SdkClientException;
+import com.amazonaws.http.timers.client.SdkInterruptedException;
 import org.junit.Test;
 import software.amazon.awssdk.services.kinesis.model.StartingPosition;
 import software.amazon.kinesis.connectors.flink.internals.publisher.fanout.FanOutRecordPublisherFactory;
@@ -40,6 +42,7 @@ import static software.amazon.awssdk.services.kinesis.model.ShardIteratorType.AT
 import static software.amazon.awssdk.services.kinesis.model.ShardIteratorType.AT_TIMESTAMP;
 import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.STREAM_INITIAL_TIMESTAMP;
 import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.STREAM_TIMESTAMP_DATE_FORMAT;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_BACKOFF_MAX;
 import static software.amazon.kinesis.connectors.flink.internals.ShardConsumerTestUtils.fakeSequenceNumber;
 import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber.SENTINEL_AT_TIMESTAMP_SEQUENCE_NUM;
 import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber.SENTINEL_LATEST_SEQUENCE_NUM;
@@ -208,6 +211,45 @@ public class ShardConsumerFanOutTest {
 		assertStartingPositionAfterSequenceNumber(kinesis.getStartingPositionForSubscription(2), "4");
 		assertStartingPositionAfterSequenceNumber(kinesis.getStartingPositionForSubscription(3), "6");
 		assertStartingPositionAfterSequenceNumber(kinesis.getStartingPositionForSubscription(4), "8");
+	}
+
+	@Test
+	public void testShardConsumerExitsWhenRecordPublisherIsInterrupted() throws Exception {
+		// Throws error after 5 records
+		KinesisProxyV2Interface kinesis = FakeKinesisFanOutBehavioursFactory.errorDuringSubscription(new SdkInterruptedException(null));
+
+		int expectedNumberOfRecordsReadFromKinesisBeforeError = 5;
+		SequenceNumber startingSequenceNumber = new SequenceNumber("0");
+		SequenceNumber expectedLastProcessSequenceNumber = new SequenceNumber("5");
+
+		// SdkInterruptedException will terminate the consumer, it will not retry and read only the first 5 records
+		ShardConsumerTestUtils.assertNumberOfMessagesReceivedFromKinesis(
+				expectedNumberOfRecordsReadFromKinesisBeforeError,
+				new FanOutRecordPublisherFactory(kinesis),
+				startingSequenceNumber,
+				efoProperties(),
+				expectedLastProcessSequenceNumber);
+	}
+
+	@Test
+	public void testShardConsumerRetriesGenericSdkError() throws Exception {
+		// Throws error after 5 records and there are 25 records available in the shard
+		KinesisProxyV2Interface kinesis = FakeKinesisFanOutBehavioursFactory.errorDuringSubscription(new SdkClientException(""));
+
+		int expectedNumberOfRecordsReadFromKinesisBeforeError = 25;
+		SequenceNumber startingSequenceNumber = new SequenceNumber("0");
+
+		Properties properties = efoProperties();
+		// Speed up test by reducing backoff time
+		properties.setProperty(SUBSCRIBE_TO_SHARD_BACKOFF_MAX, "1");
+
+		// SdkClientException will cause a retry, each retry will result in 5 more records being consumed
+		// The shard will consume all 25 records
+		assertNumberOfMessagesReceivedFromKinesis(
+				expectedNumberOfRecordsReadFromKinesisBeforeError,
+				kinesis,
+				startingSequenceNumber,
+				properties);
 	}
 
 	private void assertStartingPositionAfterSequenceNumber(
