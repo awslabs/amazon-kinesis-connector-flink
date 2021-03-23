@@ -31,6 +31,7 @@ import software.amazon.awssdk.services.kinesis.model.SubscribeToShardEvent;
 import software.amazon.kinesis.connectors.flink.internals.publisher.RecordBatch;
 import software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher;
 import software.amazon.kinesis.connectors.flink.internals.publisher.fanout.FanOutShardSubscriber.FanOutSubscriberException;
+import software.amazon.kinesis.connectors.flink.internals.publisher.fanout.FanOutShardSubscriber.FanOutSubscriberInterruptedException;
 import software.amazon.kinesis.connectors.flink.internals.publisher.fanout.FanOutShardSubscriber.RecoverableFanOutSubscriberException;
 import software.amazon.kinesis.connectors.flink.model.SequenceNumber;
 import software.amazon.kinesis.connectors.flink.model.StartingPosition;
@@ -46,6 +47,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import static software.amazon.awssdk.services.kinesis.model.StartingPosition.builder;
+import static software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher.RecordPublisherRunResult.CANCELLED;
 
 /**
  * A {@link RecordPublisher} that will read and forward records from Kinesis using EFO, to the subscriber.
@@ -140,6 +142,9 @@ public class FanOutRecordPublisher implements RecordPublisher {
 			complete = fanOutShardSubscriber.subscribeToShardAndConsumeRecords(
 					toSdkV2StartingPosition(nextStartingPosition), eventConsumer);
 			attempt = 0;
+		} catch (FanOutSubscriberInterruptedException ex) {
+			LOG.info("Thread interrupted, closing record publisher for shard {}.", subscribedShard.getShard().getShardId(), ex);
+			return CANCELLED;
 		} catch (RecoverableFanOutSubscriberException ex) {
 			// Recoverable errors should be reattempted without contributing to the retry policy
 			// A recoverable error would not result in the Flink job being cancelled
