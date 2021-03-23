@@ -57,10 +57,24 @@ import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNum
 public class ShardConsumerTestUtils {
 
 	public static <T> ShardConsumerMetricsReporter assertNumberOfMessagesReceivedFromKinesis(
+			final int expectedNumberOfMessages,
+			final RecordPublisherFactory recordPublisherFactory,
+			final SequenceNumber startingSequenceNumber,
+			final Properties consumerProperties) throws InterruptedException {
+		return assertNumberOfMessagesReceivedFromKinesis(
+				expectedNumberOfMessages,
+				recordPublisherFactory,
+				startingSequenceNumber,
+				consumerProperties,
+				SENTINEL_SHARD_ENDING_SEQUENCE_NUM.get());
+	}
+
+	public static <T> ShardConsumerMetricsReporter assertNumberOfMessagesReceivedFromKinesis(
 				final int expectedNumberOfMessages,
 				final RecordPublisherFactory recordPublisherFactory,
 				final SequenceNumber startingSequenceNumber,
-				final Properties consumerProperties) throws InterruptedException {
+				final Properties consumerProperties,
+				final SequenceNumber expectedLastProcessedSequenceNum) throws InterruptedException {
 		ShardConsumerMetricsReporter shardMetricsReporter = new ShardConsumerMetricsReporter(mock(MetricGroup.class));
 
 		StreamShardHandle fakeToBeConsumedShard = getMockStreamShard("fakeStream", 0);
@@ -107,9 +121,7 @@ public class ShardConsumerTestUtils {
 			.run();
 
 		assertEquals(expectedNumberOfMessages, sourceContext.getCollectedOutputs().size());
-		assertEquals(
-			SENTINEL_SHARD_ENDING_SEQUENCE_NUM.get(),
-			subscribedShardsStateUnderTest.get(0).getLastProcessedSequenceNum());
+		assertEquals(expectedLastProcessedSequenceNum, subscribedShardsStateUnderTest.get(0).getLastProcessedSequenceNum());
 
 		return shardMetricsReporter;
 	}
