@@ -32,6 +32,7 @@ import software.amazon.kinesis.connectors.flink.testutils.TestUtils;
 import software.amazon.kinesis.connectors.flink.testutils.TestUtils.TestConsumer;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.AdditionalMatchers.geq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -47,6 +48,8 @@ import static software.amazon.kinesis.connectors.flink.testutils.FakeKinesisBeha
  */
 public class PollingRecordPublisherTest {
 
+	private static final long FETCH_INTERVAL_MILLIS = 500L;
+
 	@Rule
 	public ExpectedException thrown = ExpectedException.none();
 
@@ -61,6 +64,21 @@ public class PollingRecordPublisherTest {
 		assertEquals(1, consumer.getRecordBatches().size());
 		assertEquals(5, consumer.getRecordBatches().get(0).getDeaggregatedRecordSize());
 		assertEquals(100L, consumer.getRecordBatches().get(0).getMillisBehindLatest(), 0);
+	}
+
+	@Test
+	public void testRunEmitsRunLoopTimeNanos() throws Exception {
+		PollingRecordPublisherMetricsReporter metricsReporter =
+				spy(new PollingRecordPublisherMetricsReporter(mock(MetricGroup.class)));
+
+		KinesisProxyInterface fakeKinesis = totalNumOfRecordsAfterNumOfGetRecordsCalls(5, 5, 100);
+		PollingRecordPublisher recordPublisher =
+				createPollingRecordPublisher(fakeKinesis, metricsReporter);
+
+		recordPublisher.run(new TestConsumer());
+
+		// Expect that the run loop took at least FETCH_INTERVAL_MILLIS in nanos
+		verify(metricsReporter).setRunLoopTimeNanos(geq(FETCH_INTERVAL_MILLIS * 1_000_000));
 	}
 
 	@Test
@@ -130,16 +148,24 @@ public class PollingRecordPublisherTest {
 			100);
 	}
 
-	PollingRecordPublisher createPollingRecordPublisher(final KinesisProxyInterface kinesis) throws Exception {
-		PollingRecordPublisherMetricsReporter metricsReporter = new PollingRecordPublisherMetricsReporter(mock(MetricGroup.class));
+	PollingRecordPublisher createPollingRecordPublisher(final KinesisProxyInterface kinesis)
+			throws Exception {
+		PollingRecordPublisherMetricsReporter metricsReporter =
+				new PollingRecordPublisherMetricsReporter(mock(MetricGroup.class));
 
-		return new PollingRecordPublisher(
-			StartingPosition.restartFromSequenceNumber(SENTINEL_EARLIEST_SEQUENCE_NUM.get()),
-			TestUtils.createDummyStreamShardHandle(),
-			metricsReporter,
-			kinesis,
-			10000,
-			500L);
+		return createPollingRecordPublisher(kinesis, metricsReporter);
 	}
 
+	PollingRecordPublisher createPollingRecordPublisher(
+			final KinesisProxyInterface kinesis,
+			final PollingRecordPublisherMetricsReporter metricGroupReporter)
+			throws Exception {
+		return new PollingRecordPublisher(
+				StartingPosition.restartFromSequenceNumber(SENTINEL_EARLIEST_SEQUENCE_NUM.get()),
+				TestUtils.createDummyStreamShardHandle(),
+				metricGroupReporter,
+				kinesis,
+				10000,
+				FETCH_INTERVAL_MILLIS);
+	}
 }
