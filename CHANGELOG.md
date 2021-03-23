@@ -1,5 +1,14 @@
 # Changelog
 
+## Release 1.1.1 (March 23rd, 2021)
+* Fix `PollingRecordPublisher` to respect `SHARD_GETRECORDS_INTERVAL_MILLIS`.
+  ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/17)) 
+  ([Apache Flink JIRA](https://issues.apache.org/jira/browse/FLINK-21661))
+  
+* Update EFO consumer error handling to treat Interrupted exceptions as non-recoverable.
+  ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/16)) 
+  ([Apache Flink JIRA](https://issues.apache.org/jira/browse/FLINK-21933))
+
 ## Release 1.1.0 (December 22nd, 2020)
 * Migrate EFO consumers to use `DescribeStreamSummary` rather than `DescribeStream`. `DescribeStreamSummary` has a 
 higher TPS quota, resulting in reduced startup time for high parallelism sources. You may need add IAM permission for 
