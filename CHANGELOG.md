@@ -1,5 +1,15 @@
 # Changelog
 
+
+## Release 2.0.1 (March 23rd, 2021)
+* Fix `PollingRecordPublisher` to respect `SHARD_GETRECORDS_INTERVAL_MILLIS`.
+  ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/17)) 
+  ([Apache Flink JIRA](https://issues.apache.org/jira/browse/FLINK-21661))
+  
+* Update EFO consumer error handling to treat Interrupted exceptions as non-recoverable.
+  ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/16)) 
+  ([Apache Flink JIRA](https://issues.apache.org/jira/browse/FLINK-21933))
+
 ## Release 2.0.0 (December 22nd, 2020)
 * Add KDS connector support in the Table API and SQL layer.
   ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/6))
