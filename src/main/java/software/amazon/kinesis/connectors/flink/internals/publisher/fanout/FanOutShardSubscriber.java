@@ -388,14 +388,20 @@ public class FanOutShardSubscriber {
 			LOG.debug("Error occurred on EFO subscription: {} - ({}).  {} ({})",
 				throwable.getClass().getName(), throwable.getMessage(), shardId, consumerArn, throwable);
 
-			if (subscriptionErrorEvent.get() == null) {
-				subscriptionErrorEvent.set(new SubscriptionErrorEvent(throwable));
+			SubscriptionErrorEvent subscriptionErrorEvent = new SubscriptionErrorEvent(throwable);
+			if (FanOutShardSubscriber.this.subscriptionErrorEvent.get() == null) {
+				FanOutShardSubscriber.this.subscriptionErrorEvent.set(subscriptionErrorEvent);
 			} else {
 				LOG.warn("Error already queued. Ignoring subsequent exception.", throwable);
 			}
 
 			// Cancel the subscription to signal the onNext to stop requesting data
 			cancelSubscription();
+
+			// If there is space in the queue, insert the error to wake up blocked thread
+			if (queue.isEmpty()) {
+				queue.offer(subscriptionErrorEvent);
+			}
 		}
 
 		@Override
