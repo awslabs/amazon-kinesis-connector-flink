@@ -196,6 +196,12 @@ public class FakeKinesisFanOutBehavioursFactory {
 		@Override
 		void sendEvents(Subscriber<? super SubscribeToShardEventStream> subscriber) {
 			sendEventBatch(subscriber);
+			try {
+				// Add an artificial delay to allow records to flush
+				Thread.sleep(200);
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
 			for (Throwable throwable : throwables) {
 				subscriber.onError(throwable);
 			}
