@@ -1,5 +1,9 @@
 # Changelog
 
+## Release 2.0.2 (March 29th, 2021)
+* Add time-out for acquiring subscription and passing events from network to source thread to prevent deadlock.
+  ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/18)) 
+
 ## Release 2.0.1 (March 23rd, 2021)
 * Fix `PollingRecordPublisher` to respect `SHARD_GETRECORDS_INTERVAL_MILLIS`.
   ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/17)) 
