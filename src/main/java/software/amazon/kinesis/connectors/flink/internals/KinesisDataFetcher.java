@@ -736,18 +736,27 @@ public class KinesisDataFetcher<T> {
 	 * Once called, the shutdown procedure will be executed and all shard consuming threads will be interrupted.
 	 */
 	public void shutdownFetcher() {
-		if (LOG.isInfoEnabled()) {
-			LOG.info("Starting shutdown of shard consumer threads and AWS SDK resources of subtask {} ...",
-					indexOfThisConsumerSubtask);
+		try {
+			if (LOG.isInfoEnabled()) {
+				LOG.info("Starting shutdown of shard consumer threads and AWS SDK resources of subtask {} ...",
+						indexOfThisConsumerSubtask);
+			}
+
+			running = false;
+			try {
+				deregisterStreamConsumer();
+			} catch (Exception e) {
+				LOG.warn("Encountered exception deregistering stream consumers", e);
+			}
+
+			try {
+				closeRecordPublisherFactory();
+			} catch (Exception e) {
+				LOG.warn("Encountered exception closing record publisher factory", e);
+			}
+		} finally {
+			shardConsumersExecutor.shutdownNow();
 		}
-
-		running = false;
-
-		StreamConsumerRegistrarUtil.deregisterStreamConsumers(configProps, streams);
-
-		recordPublisherFactory.close();
-
-		shardConsumersExecutor.shutdownNow();
 
 		if (mainThread != null) {
 			mainThread.interrupt(); // the main thread may be sleeping for the discovery interval
@@ -761,6 +770,22 @@ public class KinesisDataFetcher<T> {
 		if (LOG.isInfoEnabled()) {
 			LOG.info("Shutting down the shard consumer threads of subtask {} ...", indexOfThisConsumerSubtask);
 		}
+	}
+
+	/**
+	 * Closes recordRecordPublisherFactory. Allows test to override this to simulate exception for shutdown logic.
+	 */
+	@VisibleForTesting
+	protected void closeRecordPublisherFactory() {
+		recordPublisherFactory.close();
+	}
+
+	/**
+	 * Deregisters stream consumers. Allows test to override this to simulate exception for shutdown logic.
+	 */
+	@VisibleForTesting
+	protected void deregisterStreamConsumer() {
+		StreamConsumerRegistrarUtil.deregisterStreamConsumers(configProps, streams);
 	}
 
 	/**
