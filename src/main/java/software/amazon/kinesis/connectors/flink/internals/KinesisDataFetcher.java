@@ -736,13 +736,11 @@ public class KinesisDataFetcher<T> {
 	 * Once called, the shutdown procedure will be executed and all shard consuming threads will be interrupted.
 	 */
 	public void shutdownFetcher() {
-		try {
-			if (LOG.isInfoEnabled()) {
-				LOG.info("Starting shutdown of shard consumer threads and AWS SDK resources of subtask {} ...",
-						indexOfThisConsumerSubtask);
-			}
+		LOG.info("Starting shutdown of shard consumer threads and AWS SDK resources of subtask {} ...",
+				indexOfThisConsumerSubtask, error.get());
 
-			running = false;
+		running = false;
+		try {
 			try {
 				deregisterStreamConsumer();
 			} catch (Exception e) {
@@ -756,20 +754,18 @@ public class KinesisDataFetcher<T> {
 			}
 		} finally {
 			shardConsumersExecutor.shutdownNow();
+
+			if (mainThread != null) {
+				mainThread.interrupt(); // the main thread may be sleeping for the discovery interval
+			}
+
+			if (watermarkTracker != null) {
+				watermarkTracker.close();
+			}
+			this.recordEmitter.stop();
 		}
 
-		if (mainThread != null) {
-			mainThread.interrupt(); // the main thread may be sleeping for the discovery interval
-		}
-
-		if (watermarkTracker != null) {
-			watermarkTracker.close();
-		}
-		this.recordEmitter.stop();
-
-		if (LOG.isInfoEnabled()) {
-			LOG.info("Shutting down the shard consumer threads of subtask {} ...", indexOfThisConsumerSubtask);
-		}
+		LOG.info("Shutting down the shard consumer threads of subtask {} ...", indexOfThisConsumerSubtask);
 	}
 
 	/**
