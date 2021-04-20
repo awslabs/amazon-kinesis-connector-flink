@@ -225,7 +225,7 @@ public class FanOutShardSubscriber {
 			final String errorMessage = "Timed out acquiring subscription - " + shardId + " (" + consumerArn + ")";
 			LOG.error(errorMessage);
 			subscription.cancelSubscription();
-			throw new RetryableFanOutSubscriberException(new TimeoutException(errorMessage));
+			handleError(new RecoverableFanOutSubscriberException(new TimeoutException(errorMessage)));
 		}
 
 		Throwable throwable = exception.get();
@@ -261,6 +261,8 @@ public class FanOutShardSubscriber {
 
 		if (isInterrupted(throwable)) {
 			throw new FanOutSubscriberInterruptedException(throwable);
+		} else if (cause instanceof FanOutSubscriberException) {
+			throw (FanOutSubscriberException) cause;
 		} else if (cause instanceof ReadTimeoutException) {
 			// ReadTimeoutException occurs naturally under backpressure scenarios when full batches take longer to
 			// process than standard read timeout (default 30s). Recoverable exceptions are intended to be retried
@@ -436,7 +438,7 @@ public class FanOutShardSubscriber {
 					final String errorMessage = "Timed out enqueuing event " + event.getClass().getSimpleName() + " - "
 							+ shardId + " (" + consumerArn + ")";
 					LOG.error(errorMessage);
-					onError(new TimeoutException(errorMessage));
+					onError(new RecoverableFanOutSubscriberException(new TimeoutException(errorMessage)));
 				}
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
