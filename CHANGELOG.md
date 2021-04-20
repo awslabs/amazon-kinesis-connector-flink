@@ -1,5 +1,21 @@
 # Changelog
 
+## Release 2.0.3 (April 20th, 2021)
+* Fix issue where KinesisDataFetcher.shutdownFetcher() hangs.
+  ([issue](https://github.com/awslabs/amazon-kinesis-connector-flink/issues/23), 
+  [pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/24))
+  
+* Log error when shutting down Kinesis Data Fetcher.
+  ([issue](https://github.com/awslabs/amazon-kinesis-connector-flink/issues/22), 
+  [pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/25))
+  
+* Treating TimeoutException as Recoverable Exception.
+  ([issue](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/28), 
+  [pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/issues/21))
+  
+* Adding a SQL connector module for SQL client.
+  ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/26))
+
 ## Release 2.0.2 (March 29th, 2021)
 * Add time-out for acquiring subscription and passing events from network to source thread to prevent deadlock.
   ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/18)) 

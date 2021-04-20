@@ -31,7 +31,7 @@ Add the following dependency to your project to start using the connector.
 <dependency>
     <groupId>software.amazon.kinesis</groupId>
     <artifactId>amazon-kinesis-connector-flink</artifactId>
-    <version>2.0.2</version>
+    <version>2.0.3</version>
 </dependency>
 ```  
 
@@ -42,6 +42,10 @@ Refer to the official Apache Flink documentation for more information on configu
 Note that Flink 1.11 does not support [the "Available Metadata" functionality from upstream Table/SQL connector documentation](https://ci.apache.org/projects/flink/flink-docs-master/dev/table/connectors/kinesis.html#available-metadata). 
 If you want to expose KDS metadata fields in your table definitions, consider upgrading to Flink 1.12 or higher and using the KDS connector from the upstream repository.
 
+## SQL Connector
+
+The `amazon-kinesis-sql-connector-flink` module can be used to build a fully shaded connector that can be used with Flink SQL client.
+ 
 ## Migration
 
 If you are migrating from the Apache Flink Kinesis Connector, you should perform the following steps:
