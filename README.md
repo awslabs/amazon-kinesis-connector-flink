@@ -79,8 +79,7 @@ Note the additional IAM permissions required to use EFO:
   "Effect": "Allow",
   "Action": [
     "kinesis:DescribeStreamSummary",
-    "kinesis:RegisterStreamConsumer",
-    "kinesis:DeregisterStreamConsumer"
+    "kinesis:RegisterStreamConsumer"
   ],
   "Resource": "arn:aws:kinesis:<region>:<account>:stream/<stream-name>"
 },
@@ -89,7 +88,8 @@ Note the additional IAM permissions required to use EFO:
   "Effect": "Allow",
   "Action": [
     "kinesis:DescribeStreamConsumer",
-    "kinesis:SubscribeToShard"
+    "kinesis:SubscribeToShard",
+    "kinesis:DeregisterStreamConsumer"
   ],
   "Resource": [
     "arn:aws:kinesis:<region>:<account>:stream/<stream-name>/consumer/<consumer-name>",
