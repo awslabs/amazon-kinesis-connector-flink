@@ -26,6 +26,8 @@ import software.amazon.kinesis.connectors.flink.FlinkKinesisConsumer;
 import software.amazon.kinesis.connectors.flink.internals.ShardConsumer;
 import software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber;
 
+import java.time.Duration;
+
 /**
  * Optional consumer specific configuration keys and default values for {@link FlinkKinesisConsumer}.
  */
@@ -176,6 +178,9 @@ public class ConsumerConfigConstants extends AWSConfigConstants {
 	/** The maximum number of subscribeToShard attempts if we get a recoverable exception. */
 	public static final String SUBSCRIBE_TO_SHARD_RETRIES = "flink.shard.subscribetoshard.maxretries";
 
+	/** A timeout when waiting for a shard subscription to be established. */
+	public static final String SUBSCRIBE_TO_SHARD_TIMEOUT_SECONDS = "flink.shard.subscribetoshard.timeout";
+
 	/** The base backoff time between each subscribeToShard attempt. */
 	public static final String SUBSCRIBE_TO_SHARD_BACKOFF_BASE = "flink.shard.subscribetoshard.backoff.base";
 
@@ -288,6 +293,8 @@ public class ConsumerConfigConstants extends AWSConfigConstants {
 	public static final double DEFAULT_DEREGISTER_STREAM_BACKOFF_EXPONENTIAL_CONSTANT = 1.5;
 
 	public static final int DEFAULT_SUBSCRIBE_TO_SHARD_RETRIES = 10;
+
+	public static final Duration DEFAULT_SUBSCRIBE_TO_SHARD_TIMEOUT = Duration.ofSeconds(60);
 
 	public static final long DEFAULT_SUBSCRIBE_TO_SHARD_BACKOFF_BASE = 1000L;
 
