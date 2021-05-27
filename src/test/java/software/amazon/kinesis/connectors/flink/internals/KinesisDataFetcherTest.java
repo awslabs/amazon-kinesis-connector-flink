@@ -39,7 +39,6 @@ import org.junit.Test;
 import org.powermock.reflect.Whitebox;
 import software.amazon.kinesis.connectors.flink.FlinkKinesisConsumer;
 import software.amazon.kinesis.connectors.flink.KinesisShardAssigner;
-import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants;
 import software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher;
 import software.amazon.kinesis.connectors.flink.model.KinesisStreamShardState;
 import software.amazon.kinesis.connectors.flink.model.SequenceNumber;
@@ -96,11 +95,12 @@ public class KinesisDataFetcherTest extends TestLogger {
 		assertTrue(fetcher.isRunning());
 	}
 
-	@Test
-	public void testIsRunningFalseAfterShutDown() {
+	@Test(timeout = 1000)
+	public void testIsRunningFalseAfterShutDown() throws InterruptedException {
 		KinesisDataFetcher<String> fetcher = createTestDataFetcherWithNoShards(10, 2, "test-stream");
 
 		fetcher.shutdownFetcher();
+		fetcher.awaitTermination();
 
 		assertFalse(fetcher.isRunning());
 	}
@@ -886,19 +886,15 @@ public class KinesisDataFetcherTest extends TestLogger {
 			fetcher.wasInterrupted);
 	}
 
-	@Test
-	public void testRecordPublisherFactoryIsTornDown() {
-		Properties config = TestUtils.getStandardProperties();
-		config.setProperty(ConsumerConfigConstants.RECORD_PUBLISHER_TYPE, ConsumerConfigConstants.RecordPublisherType.EFO.name());
-		config.setProperty(ConsumerConfigConstants.EFO_REGISTRATION_TYPE, ConsumerConfigConstants.EFORegistrationType.NONE.name());
-
+	@Test(timeout = 1000L)
+	public void testRecordPublisherFactoryIsTornDown() throws InterruptedException {
 		KinesisProxyV2Interface kinesisV2 = mock(KinesisProxyV2Interface.class);
 
 		TestableKinesisDataFetcher<String> fetcher =
 			new TestableKinesisDataFetcher<String>(
 				singletonList("fakeStream1"),
 				new TestSourceContext<>(),
-				config,
+				TestUtils.efoProperties(),
 				new KinesisDeserializationSchemaWrapper<>(new SimpleStringSchema()),
 				10,
 				2,
@@ -912,6 +908,64 @@ public class KinesisDataFetcherTest extends TestLogger {
 		fetcher.shutdownFetcher();
 
 		verify(kinesisV2).close();
+		fetcher.awaitTermination();
+	}
+
+	@Test(timeout = 1000L)
+	public void testRecordPublisherFactoryIsTornDownWhenDeregisterStreamConsumerThrowsException()
+			throws InterruptedException {
+		KinesisProxyV2Interface kinesisV2 = mock(KinesisProxyV2Interface.class);
+
+		TestableKinesisDataFetcher<String> fetcher =
+				new TestableKinesisDataFetcher<String>(
+						singletonList("fakeStream1"),
+						new TestSourceContext<>(),
+						TestUtils.efoProperties(),
+						new KinesisDeserializationSchemaWrapper<>(new SimpleStringSchema()),
+						10,
+						2,
+						new AtomicReference<>(),
+						new LinkedList<>(),
+						new HashMap<>(),
+						mock(KinesisProxyInterface.class),
+						kinesisV2) {
+					@Override
+					protected void deregisterStreamConsumer() {
+						throw new RuntimeException();
+					}
+				};
+
+		fetcher.shutdownFetcher();
+
+		verify(kinesisV2).close();
+		fetcher.awaitTermination();
+	}
+
+	@Test(timeout = 1000L)
+	public void testExecutorServiceShutDownWhenCloseRecordPublisherFactoryThrowsException()
+			throws InterruptedException {
+		TestableKinesisDataFetcher<String> fetcher =
+				new TestableKinesisDataFetcher<String>(
+						singletonList("fakeStream1"),
+						new TestSourceContext<>(),
+						TestUtils.efoProperties(),
+						new KinesisDeserializationSchemaWrapper<>(new SimpleStringSchema()),
+						10,
+						2,
+						new AtomicReference<>(),
+						new LinkedList<>(),
+						new HashMap<>(),
+						mock(KinesisProxyInterface.class),
+						mock(KinesisProxyV2Interface.class)) {
+					@Override
+					protected void closeRecordPublisherFactory() {
+						throw new RuntimeException();
+					}
+				};
+
+		fetcher.shutdownFetcher();
+
+		fetcher.awaitTermination();
 	}
 
 	private KinesisDataFetcher<String> createTestDataFetcherWithNoShards(
