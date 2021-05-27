@@ -1,5 +1,21 @@
 # Changelog
 
+## Release 1.1.2 (May 27th, 2021)
+* Backport Fix issue where KinesisDataFetcher.shutdownFetcher() hangs.
+  ([issue](https://github.com/awslabs/amazon-kinesis-connector-flink/issues/23), 
+  [pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/32))
+  
+* Backport - Log error when shutting down Kinesis Data Fetcher.
+  ([issue](https://github.com/awslabs/amazon-kinesis-connector-flink/issues/22), 
+  [pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/32))
+  
+* Backport - Treating TimeoutException as Recoverable Exception.
+  ([issue](https://github.com/awslabs/amazon-kinesis-connector-flink/issues/21), 
+  [pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/32))
+  
+* Backport - Add time-out for acquiring subscription and passing events from network to source thread to prevent deadlock.
+  ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/31)) 
+
 ## Release 1.1.1 (March 23rd, 2021)
 * Fix `PollingRecordPublisher` to respect `SHARD_GETRECORDS_INTERVAL_MILLIS`.
   ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/17)) 
