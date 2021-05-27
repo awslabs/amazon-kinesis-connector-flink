@@ -95,6 +95,10 @@ public class FakeKinesisFanOutBehavioursFactory {
 		return new AlternatingSubscriptionErrorKinesisV2(LimitExceededException.builder().build());
 	}
 
+	public static KinesisProxyV2Interface failsToAcquireSubscription() {
+		return new FailsToAcquireSubscriptionKinesis();
+	}
+
 	// ------------------------------------------------------------------------
 	//  Behaviours related to describing streams
 	// ------------------------------------------------------------------------
@@ -192,6 +196,12 @@ public class FakeKinesisFanOutBehavioursFactory {
 		@Override
 		void sendEvents(Subscriber<? super SubscribeToShardEventStream> subscriber) {
 			sendEventBatch(subscriber);
+			try {
+				// Add an artificial delay to allow records to flush
+				Thread.sleep(200);
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
 			for (Throwable throwable : throwables) {
 				subscriber.onError(throwable);
 			}
@@ -341,6 +351,20 @@ public class FakeKinesisFanOutBehavioursFactory {
 			public SingleShardFanOutKinesisV2 build() {
 				return new SingleShardFanOutKinesisV2(this);
 			}
+		}
+	}
+
+	/**
+	 * A dummy EFO implementation that fails to acquire subscription (no response).
+	 */
+	private static class FailsToAcquireSubscriptionKinesis extends KinesisProxyV2InterfaceAdapter {
+
+		@Override
+		public CompletableFuture<Void> subscribeToShard(
+				final SubscribeToShardRequest request,
+				final SubscribeToShardResponseHandler responseHandler) {
+
+			return CompletableFuture.supplyAsync(() -> null);
 		}
 	}
 

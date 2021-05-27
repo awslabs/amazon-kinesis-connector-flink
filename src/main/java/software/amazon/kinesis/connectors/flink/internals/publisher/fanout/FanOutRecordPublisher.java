@@ -133,9 +133,10 @@ public class FanOutRecordPublisher implements RecordPublisher {
 	private RecordPublisherRunResult runWithBackoff(
 			final Consumer<SubscribeToShardEvent> eventConsumer) throws InterruptedException {
 		FanOutShardSubscriber fanOutShardSubscriber = new FanOutShardSubscriber(
-			consumerArn,
-			subscribedShard.getShard().getShardId(),
-			kinesisProxy);
+				consumerArn,
+				subscribedShard.getShard().getShardId(),
+				kinesisProxy,
+				configuration.getSubscribeToShardTimeout());
 		boolean complete;
 
 		try {
