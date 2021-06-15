@@ -39,6 +39,7 @@ import com.amazonaws.services.kinesis.producer.UserRecordResult;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.kinesis.connectors.flink.serialization.KinesisSerializationSchema;
@@ -301,7 +302,7 @@ public class FlinkKinesisProducer<OUT> extends RichSinkFunction<OUT> implements 
 		}
 
 		ListenableFuture<UserRecordResult> cb = producer.addUserRecord(stream, partition, explicitHashkey, serialized);
-		Futures.addCallback(cb, callback);
+		Futures.addCallback(cb, callback, MoreExecutors.directExecutor());
 	}
 
 	@Override
