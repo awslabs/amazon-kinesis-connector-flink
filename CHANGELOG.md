@@ -1,5 +1,13 @@
 # Changelog
 
+## Release 1.2.0 (June 29th 2021)
+* Dependency Updates:
+  * AWS SDK v1 from `1.11.844` to `1.12.7` ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/38))
+  * AWS SDK v2 from `2.13.52` to `2.16.86` ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/38))
+  * AWS DynamoDB Streams Kinesis Adapater from `1.5.0` to `1.5.3` ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/38)) 
+  * Guava from `18` to `29.0-jre` ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/36))
+  * Jackson from `2.10.1` to `2.12.1` ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/38))
+  
 ## Release 1.1.2 (May 27th, 2021)
 * Backport Fix issue where KinesisDataFetcher.shutdownFetcher() hangs.
   ([issue](https://github.com/awslabs/amazon-kinesis-connector-flink/issues/23), 
