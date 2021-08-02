@@ -89,7 +89,7 @@ public class FanOutShardSubscriber {
 	 * The queue is mainly used to isolate networking from consumption such that errors do not bubble up.
 	 * This queue also acts as a buffer resulting in a record prefetch and reduced latency.
 	 */
-	private static final int QUEUE_CAPACITY = 1;
+	private static final int QUEUE_CAPACITY = 2;
 
 	/**
 	 * Read timeout will occur after 30 seconds, a sanity timeout to prevent lockup in unexpected error states.
@@ -321,6 +321,9 @@ public class FanOutShardSubscriber {
 				result = false;
 				break;
 			} else if (subscriptionEvent.isSubscribeToShardEvent()) {
+				// Request for KDS to send the next record batch
+				subscription.requestRecord();
+
 				SubscribeToShardEvent event = subscriptionEvent.getSubscribeToShardEvent();
 				continuationSequenceNumber = event.continuationSequenceNumber();
 				if (!event.records().isEmpty()) {
@@ -380,7 +383,6 @@ public class FanOutShardSubscriber {
 				@Override
 				public void visit(SubscribeToShardEvent event) {
 					enqueueEvent(new SubscriptionNextEvent(event));
-					requestRecord();
 				}
 			});
 		}
