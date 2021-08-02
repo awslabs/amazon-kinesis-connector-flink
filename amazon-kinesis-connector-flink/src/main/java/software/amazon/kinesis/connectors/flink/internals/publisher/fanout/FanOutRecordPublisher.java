@@ -165,7 +165,7 @@ public class FanOutRecordPublisher implements RecordPublisher {
 			}
 
 			if (attempt == configuration.getSubscribeToShardMaxRetries()) {
-				final String errorMessage = "Maximum reties exceeded for SubscribeToShard. " +
+				final String errorMessage = "Maximum retries exceeded for SubscribeToShard. " +
 					"Failed " + configuration.getSubscribeToShardMaxRetries() + " times.";
 				LOG.error(errorMessage, ex.getCause());
 				throw new RuntimeException(errorMessage, ex.getCause());

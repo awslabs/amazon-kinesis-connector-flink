@@ -53,6 +53,7 @@ public class KinesisProxyV2Factory {
 		Preconditions.checkNotNull(configProps);
 
 		final ClientConfiguration clientConfiguration = new ClientConfigurationFactory().getConfig();
+		populateDefaultValues(clientConfiguration);
 		AWSUtil.setAwsClientConfigProperties(clientConfiguration, configProps);
 
 		final SdkAsyncHttpClient httpClient = AwsV2Util.createHttpClient(clientConfiguration, NettyNioAsyncHttpClient.builder(), configProps);
@@ -60,6 +61,10 @@ public class KinesisProxyV2Factory {
 		final KinesisAsyncClient client = AwsV2Util.createKinesisAsyncClient(configProps, clientConfiguration, httpClient);
 
 		return new KinesisProxyV2(client, httpClient, configuration, BACKOFF);
+	}
+
+	private static void populateDefaultValues(final ClientConfiguration clientConfiguration) {
+		clientConfiguration.setUseTcpKeepAlive(true);
 	}
 
 }

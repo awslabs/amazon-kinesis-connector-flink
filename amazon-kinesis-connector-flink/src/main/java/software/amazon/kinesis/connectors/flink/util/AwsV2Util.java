@@ -55,10 +55,14 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.Properties;
 
-import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DEFAULT_EFO_HTTP_CLIENT_MAX_CONURRENCY;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DEFAULT_EFO_HTTP_CLIENT_ACQUISITION_TIMEOUT;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DEFAULT_EFO_HTTP_CLIENT_MAX_CONCURRENCY;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.DEFAULT_EFO_HTTP_CLIENT_READ_TIMEOUT;
 import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFORegistrationType.EAGER;
 import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFORegistrationType.NONE;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_HTTP_CLIENT_ACQUISITION_TIMEOUT_MILLIS;
 import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_HTTP_CLIENT_MAX_CONCURRENCY;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_HTTP_CLIENT_READ_TIMEOUT_MILLIS;
 import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_REGISTRATION_TYPE;
 import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RECORD_PUBLISHER_TYPE;
 import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.RecordPublisherType.EFO;
@@ -71,7 +75,6 @@ public class AwsV2Util {
 
 	private static final int INITIAL_WINDOW_SIZE_BYTES = 512 * 1024; // 512 KB
 	private static final Duration HEALTH_CHECK_PING_PERIOD = Duration.ofSeconds(60);
-	private static final Duration CONNECTION_ACQUISITION_TIMEOUT = Duration.ofSeconds(60);
 
 	/**
 	 * Creates an Amazon Kinesis Async Client from the provided properties.
@@ -101,16 +104,30 @@ public class AwsV2Util {
 		int maxConcurrency = Optional
 			.ofNullable(consumerConfig.getProperty(EFO_HTTP_CLIENT_MAX_CONCURRENCY))
 			.map(Integer::parseInt)
-			.orElse(DEFAULT_EFO_HTTP_CLIENT_MAX_CONURRENCY);
+			.orElse(DEFAULT_EFO_HTTP_CLIENT_MAX_CONCURRENCY);
+
+		Duration readTimeout = Optional
+				.ofNullable(consumerConfig.getProperty(EFO_HTTP_CLIENT_READ_TIMEOUT_MILLIS))
+				.map(Integer::parseInt)
+				.map(Duration::ofMillis)
+				.orElse(DEFAULT_EFO_HTTP_CLIENT_READ_TIMEOUT);
+
+		Duration acquisitionTimeout = Optional
+				.ofNullable(consumerConfig.getProperty(EFO_HTTP_CLIENT_ACQUISITION_TIMEOUT_MILLIS))
+				.map(Integer::parseInt)
+				.map(Duration::ofMillis)
+				.orElse(DEFAULT_EFO_HTTP_CLIENT_ACQUISITION_TIMEOUT);
 
 		httpClientBuilder
 			.maxConcurrency(maxConcurrency)
 			.connectionTimeout(Duration.ofMillis(config.getConnectionTimeout()))
+			.readTimeout(readTimeout)
+			.tcpKeepAlive(config.useTcpKeepAlive())
 			.writeTimeout(Duration.ofMillis(config.getSocketTimeout()))
 			.connectionMaxIdleTime(Duration.ofMillis(config.getConnectionMaxIdleMillis()))
 			.useIdleConnectionReaper(config.useReaper())
 			.protocol(Protocol.HTTP2)
-			.connectionAcquisitionTimeout(CONNECTION_ACQUISITION_TIMEOUT)
+			.connectionAcquisitionTimeout(acquisitionTimeout)
 			.http2Configuration(Http2Configuration
 				.builder()
 				.healthCheckPingPeriod(HEALTH_CHECK_PING_PERIOD)
