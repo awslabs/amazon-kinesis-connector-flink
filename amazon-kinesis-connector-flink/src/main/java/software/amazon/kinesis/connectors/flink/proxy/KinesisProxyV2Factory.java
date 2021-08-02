@@ -28,6 +28,7 @@ import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
 import software.amazon.kinesis.connectors.flink.internals.publisher.fanout.FanOutRecordPublisherConfiguration;
+import software.amazon.kinesis.connectors.flink.util.AWSUtil;
 import software.amazon.kinesis.connectors.flink.util.AwsV2Util;
 
 import java.util.Properties;
@@ -52,6 +53,8 @@ public class KinesisProxyV2Factory {
 		Preconditions.checkNotNull(configProps);
 
 		final ClientConfiguration clientConfiguration = new ClientConfigurationFactory().getConfig();
+		AWSUtil.setAwsClientConfigProperties(clientConfiguration, configProps);
+
 		final SdkAsyncHttpClient httpClient = AwsV2Util.createHttpClient(clientConfiguration, NettyNioAsyncHttpClient.builder(), configProps);
 		final FanOutRecordPublisherConfiguration configuration = new FanOutRecordPublisherConfiguration(configProps, emptyList());
 		final KinesisAsyncClient client = AwsV2Util.createKinesisAsyncClient(configProps, clientConfiguration, httpClient);
