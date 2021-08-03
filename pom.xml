@@ -34,7 +34,7 @@ under the License.
 
 	<groupId>software.amazon.kinesis</groupId>
 	<artifactId>amazon-kinesis-connector-flink-parent</artifactId>
-	<version>2.2.0-SNAPSHOT</version>
+	<version>2.2.0</version>
 	<packaging>pom</packaging>
 	<name>Amazon Kinesis Connector for Apache Flink Parent</name>
 
