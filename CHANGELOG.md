@@ -1,5 +1,10 @@
 # Changelog
 
+## Release 2.2.0 (August 3rd 2021)
+* Refactor `requestRecords` to prevent AWS SDK/Netty threads blocking for EFO ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/40)
+* Optionally populate ClientConfiguration from properties for EFO ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/41)
+* Increasing read timeout to 6 minutes and enabling TCP keep alive for EFO ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/42)
+
 ## Release 2.1.0 (June 29th 2021)
 * Dependency Updates:
   * AWS SDK v1 from `1.11.844` to `1.12.7` ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/37))
