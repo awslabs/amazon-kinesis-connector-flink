@@ -26,8 +26,11 @@ import org.junit.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import software.amazon.kinesis.connectors.flink.internals.ShardConsumerTestUtils;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -67,5 +70,23 @@ public class ShardConsumerMetricsReporterTest {
 		assertEquals(2, metricsReporter.getMillisBehindLatest());
 		assertEquals(3, metricsReporter.getNumberOfAggregatedRecords());
 		assertEquals(4, metricsReporter.getNumberOfDeaggregatedRecords());
+	}
+
+	@Test
+	public void testIsRegistered() {
+		ShardConsumerMetricsReporter metricsReporter = ShardConsumerTestUtils
+				.createFakeShardConsumerMetricsReporter();
+
+		assertTrue(metricsReporter.isRegistered());
+	}
+
+	@Test
+	public void testUnregister() {
+		ShardConsumerMetricsReporter metricsReporter = ShardConsumerTestUtils
+				.createFakeShardConsumerMetricsReporter();
+
+		metricsReporter.unregister();
+
+		assertFalse(metricsReporter.isRegistered());
 	}
 }

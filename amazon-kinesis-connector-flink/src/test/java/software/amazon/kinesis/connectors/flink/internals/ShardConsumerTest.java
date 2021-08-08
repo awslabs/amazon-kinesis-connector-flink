@@ -32,6 +32,7 @@ import java.util.Date;
 import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
@@ -56,6 +57,14 @@ public class ShardConsumerTest {
 
 		ShardConsumerMetricsReporter metrics = assertNumberOfMessagesReceivedFromKinesis(500, kinesis, fakeSequenceNumber());
 		assertEquals(500, metrics.getMillisBehindLatest());
+	}
+
+	@Test
+	public void testMetricsAreUnregisteredAfterShardCompletes() throws Exception {
+		KinesisProxyInterface kinesis = FakeKinesisBehavioursFactory.totalNumOfRecordsAfterNumOfGetRecordsCalls(500, 5, 500);
+
+		ShardConsumerMetricsReporter metrics = assertNumberOfMessagesReceivedFromKinesis(500, kinesis, fakeSequenceNumber());
+		assertFalse(metrics.isRegistered());
 	}
 
 	@Test

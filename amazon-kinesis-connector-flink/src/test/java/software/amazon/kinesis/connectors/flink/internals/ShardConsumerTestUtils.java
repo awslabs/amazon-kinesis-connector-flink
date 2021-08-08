@@ -21,6 +21,7 @@ package software.amazon.kinesis.connectors.flink.internals;
 
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.metrics.MetricGroup;
+import org.apache.flink.runtime.metrics.groups.UnregisteredMetricGroups;
 
 import com.amazonaws.services.kinesis.model.HashKeyRange;
 import com.amazonaws.services.kinesis.model.Shard;
@@ -28,6 +29,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.mockito.Mockito;
 import software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher;
 import software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisherFactory;
+import software.amazon.kinesis.connectors.flink.metrics.KinesisConsumerMetricConstants;
 import software.amazon.kinesis.connectors.flink.metrics.ShardConsumerMetricsReporter;
 import software.amazon.kinesis.connectors.flink.model.KinesisStreamShardState;
 import software.amazon.kinesis.connectors.flink.model.SequenceNumber;
@@ -75,7 +77,7 @@ public class ShardConsumerTestUtils {
 				final SequenceNumber startingSequenceNumber,
 				final Properties consumerProperties,
 				final SequenceNumber expectedLastProcessedSequenceNum) throws InterruptedException {
-		ShardConsumerMetricsReporter shardMetricsReporter = new ShardConsumerMetricsReporter(mock(MetricGroup.class));
+		ShardConsumerMetricsReporter shardMetricsReporter = createFakeShardConsumerMetricsReporter();
 
 		StreamShardHandle fakeToBeConsumedShard = getMockStreamShard("fakeStream", 0);
 
@@ -139,5 +141,11 @@ public class ShardConsumerTestUtils {
 
 	public static SequenceNumber fakeSequenceNumber() {
 		return new SequenceNumber("fakeStartingState");
+	}
+
+	public static ShardConsumerMetricsReporter createFakeShardConsumerMetricsReporter() {
+		return new ShardConsumerMetricsReporter(UnregisteredMetricGroups.createUnregisteredOperatorMetricGroup()
+				.addGroup(KinesisConsumerMetricConstants.STREAM_METRICS_GROUP, "fakeStream")
+				.addGroup(KinesisConsumerMetricConstants.SHARD_METRICS_GROUP, "shardId-000000000000"));
 	}
 }
