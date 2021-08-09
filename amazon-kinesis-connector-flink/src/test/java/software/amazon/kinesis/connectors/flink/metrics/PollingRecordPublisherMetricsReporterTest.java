@@ -19,7 +19,7 @@
 
 package software.amazon.kinesis.connectors.flink.metrics;
 
-import org.apache.flink.metrics.MetricGroup;
+import org.apache.flink.runtime.metrics.groups.GenericMetricGroup;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -41,7 +41,7 @@ public class PollingRecordPublisherMetricsReporterTest {
 	private PollingRecordPublisherMetricsReporter metricsReporter;
 
 	@Mock
-	private MetricGroup metricGroup;
+	private GenericMetricGroup metricGroup;
 
 	@Before
 	public void setUp() {

@@ -19,7 +19,7 @@
 
 package software.amazon.kinesis.connectors.flink.metrics;
 
-import org.apache.flink.metrics.MetricGroup;
+import org.apache.flink.runtime.metrics.groups.GenericMetricGroup;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -29,7 +29,6 @@ import org.mockito.MockitoAnnotations;
 import software.amazon.kinesis.connectors.flink.internals.ShardConsumerTestUtils;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -44,7 +43,7 @@ public class ShardConsumerMetricsReporterTest {
 	private ShardConsumerMetricsReporter metricsReporter;
 
 	@Mock
-	private MetricGroup metricGroup;
+	private GenericMetricGroup metricGroup;
 
 	@Before
 	public void setUp() {
@@ -73,20 +72,13 @@ public class ShardConsumerMetricsReporterTest {
 	}
 
 	@Test
-	public void testIsRegistered() {
-		ShardConsumerMetricsReporter metricsReporter = ShardConsumerTestUtils
-				.createFakeShardConsumerMetricsReporter();
-
-		assertTrue(metricsReporter.isRegistered());
-	}
-
-	@Test
 	public void testUnregister() {
-		ShardConsumerMetricsReporter metricsReporter = ShardConsumerTestUtils
-				.createFakeShardConsumerMetricsReporter();
+		GenericMetricGroup metricGroup = ShardConsumerTestUtils
+				.createFakeShardConsumerMetricGroup();
+		ShardConsumerMetricsReporter metricsReporter = new ShardConsumerMetricsReporter(metricGroup);
 
 		metricsReporter.unregister();
 
-		assertFalse(metricsReporter.isRegistered());
+		assertTrue(metricGroup.isClosed());
 	}
 }

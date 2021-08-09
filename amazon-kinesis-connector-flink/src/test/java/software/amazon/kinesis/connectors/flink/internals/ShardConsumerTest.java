@@ -19,6 +19,8 @@
 
 package software.amazon.kinesis.connectors.flink.internals;
 
+import org.apache.flink.runtime.metrics.groups.GenericMetricGroup;
+
 import org.junit.Test;
 import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants;
 import software.amazon.kinesis.connectors.flink.internals.publisher.polling.PollingRecordPublisherFactory;
@@ -32,7 +34,7 @@ import java.util.Date;
 import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
@@ -42,6 +44,7 @@ import static org.mockito.Mockito.verify;
 import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.SHARD_USE_ADAPTIVE_READS;
 import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.STREAM_INITIAL_TIMESTAMP;
 import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.STREAM_TIMESTAMP_DATE_FORMAT;
+import static software.amazon.kinesis.connectors.flink.internals.ShardConsumerTestUtils.createFakeShardConsumerMetricGroup;
 import static software.amazon.kinesis.connectors.flink.internals.ShardConsumerTestUtils.fakeSequenceNumber;
 import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber.SENTINEL_AT_TIMESTAMP_SEQUENCE_NUM;
 import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber.SENTINEL_EARLIEST_SEQUENCE_NUM;
@@ -60,11 +63,18 @@ public class ShardConsumerTest {
 	}
 
 	@Test
-	public void testMetricsAreUnregisteredAfterShardCompletes() throws Exception {
-		KinesisProxyInterface kinesis = FakeKinesisBehavioursFactory.totalNumOfRecordsAfterNumOfGetRecordsCalls(500, 5, 500);
-
-		ShardConsumerMetricsReporter metrics = assertNumberOfMessagesReceivedFromKinesis(500, kinesis, fakeSequenceNumber());
-		assertFalse(metrics.isRegistered());
+	public void testConsumerAndProducerMetricsAreUnregisteredAfterShardCompletes() throws Exception {
+		KinesisProxyInterface kinesis = FakeKinesisBehavioursFactory.totalNumOfRecordsAfterNumOfGetRecordsCalls(
+				500,
+				5,
+				500);
+		GenericMetricGroup metricGroup = createFakeShardConsumerMetricGroup();
+		assertNumberOfMessagesReceivedFromKinesis(
+				500,
+				kinesis,
+				fakeSequenceNumber(),
+				metricGroup);
+		assertTrue(metricGroup.isClosed());
 	}
 
 	@Test
@@ -174,6 +184,19 @@ public class ShardConsumerTest {
 			final KinesisProxyInterface kinesis,
 			final SequenceNumber startingSequenceNumber) throws Exception {
 		return assertNumberOfMessagesReceivedFromKinesis(expectedNumberOfMessages, kinesis, startingSequenceNumber, new Properties());
+	}
+
+	private ShardConsumerMetricsReporter assertNumberOfMessagesReceivedFromKinesis(
+			final int expectedNumberOfMessages,
+			final KinesisProxyInterface kinesis,
+			final SequenceNumber startingSequenceNumber,
+			final GenericMetricGroup metricGroup) throws Exception {
+		return ShardConsumerTestUtils.assertNumberOfMessagesReceivedFromKinesis(
+				expectedNumberOfMessages,
+				new PollingRecordPublisherFactory(config -> kinesis),
+				startingSequenceNumber,
+				new Properties(),
+				metricGroup);
 	}
 
 	private ShardConsumerMetricsReporter assertNumberOfMessagesReceivedFromKinesis(

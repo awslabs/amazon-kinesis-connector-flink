@@ -21,6 +21,7 @@ package software.amazon.kinesis.connectors.flink.internals.publisher;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.metrics.MetricGroup;
+import org.apache.flink.runtime.metrics.groups.GenericMetricGroup;
 
 import software.amazon.kinesis.connectors.flink.model.StartingPosition;
 import software.amazon.kinesis.connectors.flink.model.StreamShardHandle;
@@ -45,7 +46,7 @@ public interface RecordPublisherFactory {
 	RecordPublisher create(
 			StartingPosition startingPosition,
 			Properties consumerConfig,
-			MetricGroup metricGroup,
+			GenericMetricGroup metricGroup,
 			StreamShardHandle streamShardHandle) throws InterruptedException;
 
 	/**

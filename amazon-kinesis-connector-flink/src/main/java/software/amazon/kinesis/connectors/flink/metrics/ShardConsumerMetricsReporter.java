@@ -21,7 +21,6 @@
 package software.amazon.kinesis.connectors.flink.metrics;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.runtime.metrics.groups.GenericMetricGroup;
 
 import software.amazon.kinesis.connectors.flink.internals.ShardConsumer;
@@ -32,14 +31,14 @@ import software.amazon.kinesis.connectors.flink.internals.ShardConsumer;
 @Internal
 public class ShardConsumerMetricsReporter {
 
-	private final MetricGroup metricGroup;
+	private final GenericMetricGroup metricGroup;
 
 	private volatile long millisBehindLatest = -1;
 	private volatile long averageRecordSizeBytes = 0L;
 	private volatile int numberOfAggregatedRecords = 0;
 	private volatile int numberOfDeaggregatedRecords = 0;
 
-	public ShardConsumerMetricsReporter(final MetricGroup metricGroup) {
+	public ShardConsumerMetricsReporter(final GenericMetricGroup metricGroup) {
 		this.metricGroup = metricGroup;
 		metricGroup.gauge(KinesisConsumerMetricConstants.MILLIS_BEHIND_LATEST_GAUGE, this::getMillisBehindLatest);
 		metricGroup.gauge(KinesisConsumerMetricConstants.NUM_AGGREGATED_RECORDS_PER_FETCH, this::getNumberOfAggregatedRecords);
@@ -80,10 +79,6 @@ public class ShardConsumerMetricsReporter {
 	}
 
 	public void unregister() {
-		((GenericMetricGroup) this.metricGroup).close();
-	}
-
-	public boolean isRegistered() {
-		return !((GenericMetricGroup) this.metricGroup).isClosed();
+		this.metricGroup.close();
 	}
 }

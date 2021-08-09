@@ -21,7 +21,7 @@ package software.amazon.kinesis.connectors.flink.internals;
 
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.functions.RuntimeContext;
-import org.apache.flink.metrics.MetricGroup;
+import org.apache.flink.runtime.metrics.groups.GenericMetricGroup;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 
 import software.amazon.kinesis.connectors.flink.KinesisShardAssigner;
@@ -107,7 +107,8 @@ public class DynamoDBStreamsDataFetcher<T> extends KinesisDataFetcher<T> {
 	@Override
 	protected RecordPublisher createRecordPublisher(
 				SequenceNumber sequenceNumber,
-				Properties configProps, MetricGroup metricGroup,
+				Properties configProps,
+				GenericMetricGroup metricGroup,
 				StreamShardHandle subscribedShard) throws InterruptedException {
 		StartingPosition startingPosition = StartingPosition.continueFromSequenceNumber(sequenceNumber);
 		return recordPublisherFactory.create(startingPosition, getConsumerConfiguration(), metricGroup, subscribedShard);

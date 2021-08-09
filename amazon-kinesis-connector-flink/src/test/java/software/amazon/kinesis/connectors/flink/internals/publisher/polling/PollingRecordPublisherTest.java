@@ -19,8 +19,6 @@
 
 package software.amazon.kinesis.connectors.flink.internals.publisher.polling;
 
-import org.apache.flink.metrics.MetricGroup;
-
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -38,6 +36,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static software.amazon.kinesis.connectors.flink.internals.ShardConsumerTestUtils.createFakeShardConsumerMetricGroup;
 import static software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher.RecordPublisherRunResult.COMPLETE;
 import static software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher.RecordPublisherRunResult.INCOMPLETE;
 import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber.SENTINEL_EARLIEST_SEQUENCE_NUM;
@@ -69,7 +68,7 @@ public class PollingRecordPublisherTest {
 	@Test
 	public void testRunEmitsRunLoopTimeNanos() throws Exception {
 		PollingRecordPublisherMetricsReporter metricsReporter =
-				spy(new PollingRecordPublisherMetricsReporter(mock(MetricGroup.class)));
+				spy(new PollingRecordPublisherMetricsReporter(createFakeShardConsumerMetricGroup()));
 
 		KinesisProxyInterface fakeKinesis = totalNumOfRecordsAfterNumOfGetRecordsCalls(5, 5, 100);
 		PollingRecordPublisher recordPublisher =
@@ -151,7 +150,7 @@ public class PollingRecordPublisherTest {
 	PollingRecordPublisher createPollingRecordPublisher(final KinesisProxyInterface kinesis)
 			throws Exception {
 		PollingRecordPublisherMetricsReporter metricsReporter =
-				new PollingRecordPublisherMetricsReporter(mock(MetricGroup.class));
+				new PollingRecordPublisherMetricsReporter(createFakeShardConsumerMetricGroup());
 
 		return createPollingRecordPublisher(kinesis, metricsReporter);
 	}

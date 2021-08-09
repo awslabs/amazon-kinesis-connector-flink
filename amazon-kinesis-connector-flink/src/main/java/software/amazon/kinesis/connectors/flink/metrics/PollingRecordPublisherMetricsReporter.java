@@ -21,7 +21,7 @@
 package software.amazon.kinesis.connectors.flink.metrics;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.metrics.MetricGroup;
+import org.apache.flink.runtime.metrics.groups.GenericMetricGroup;
 
 import software.amazon.kinesis.connectors.flink.internals.publisher.polling.PollingRecordPublisher;
 
@@ -37,7 +37,7 @@ public class PollingRecordPublisherMetricsReporter {
 	private volatile long sleepTimeMillis = 0L;
 	private volatile int maxNumberOfRecordsPerFetch = 0;
 
-	public PollingRecordPublisherMetricsReporter(final MetricGroup metricGroup) {
+	public PollingRecordPublisherMetricsReporter(final GenericMetricGroup metricGroup) {
 		metricGroup.gauge(KinesisConsumerMetricConstants.MAX_RECORDS_PER_FETCH, this::getMaxNumberOfRecordsPerFetch);
 		metricGroup.gauge(KinesisConsumerMetricConstants.BYTES_PER_READ, this::getBytesPerRead);
 		metricGroup.gauge(KinesisConsumerMetricConstants.RUNTIME_LOOP_NANOS, this::getRunLoopTimeNanos);

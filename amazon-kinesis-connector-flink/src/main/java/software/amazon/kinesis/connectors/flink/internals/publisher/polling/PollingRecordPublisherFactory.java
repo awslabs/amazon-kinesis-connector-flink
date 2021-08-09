@@ -20,7 +20,7 @@
 package software.amazon.kinesis.connectors.flink.internals.publisher.polling;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.metrics.MetricGroup;
+import org.apache.flink.runtime.metrics.groups.GenericMetricGroup;
 import org.apache.flink.util.Preconditions;
 
 import software.amazon.kinesis.connectors.flink.internals.KinesisDataFetcher.FlinkKinesisProxyFactory;
@@ -59,7 +59,7 @@ public class PollingRecordPublisherFactory implements RecordPublisherFactory {
 	public PollingRecordPublisher create(
 			final StartingPosition startingPosition,
 			final Properties consumerConfig,
-			final MetricGroup metricGroup,
+			final GenericMetricGroup metricGroup,
 			final StreamShardHandle streamShardHandle) throws InterruptedException {
 		Preconditions.checkNotNull(startingPosition);
 		Preconditions.checkNotNull(consumerConfig);

@@ -22,6 +22,7 @@ package software.amazon.kinesis.connectors.flink.internals;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.core.testutils.CheckedThread;
+import org.apache.flink.metrics.groups.UnregisteredMetricsGroup;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor;
 import org.apache.flink.streaming.api.watermark.Watermark;
@@ -35,7 +36,9 @@ import com.amazonaws.services.kinesis.model.Shard;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.powermock.reflect.Whitebox;
 import software.amazon.kinesis.connectors.flink.FlinkKinesisConsumer;
 import software.amazon.kinesis.connectors.flink.KinesisShardAssigner;
@@ -87,6 +90,9 @@ import static org.mockito.Mockito.when;
  * Tests for the {@link KinesisDataFetcher}.
  */
 public class KinesisDataFetcherTest extends TestLogger {
+
+	@Rule
+	public ExpectedException thrown = ExpectedException.none();
 
 	@Test
 	public void testIsRunning() {
@@ -970,6 +976,17 @@ public class KinesisDataFetcherTest extends TestLogger {
 		fetcher.shutdownFetcher();
 
 		fetcher.awaitTermination();
+	}
+
+	@Test
+	public void testIfMetricGroupIsNotGenericShouldThrowException() throws Exception {
+		thrown.expect(ClassCastException.class);
+		thrown.expectMessage("MetricGroup provided is not a GenericMetricGroup. Please ensure the" +
+				"environment is providing an OperatorMetricGroup");
+
+		KinesisDataFetcher.registerShardMetricGroup(
+				new UnregisteredMetricsGroup(),
+				ShardConsumerTestUtils.getMockStreamShard("fakeStream", 0));
 	}
 
 	private KinesisDataFetcher<String> createTestDataFetcherWithNoShards(
