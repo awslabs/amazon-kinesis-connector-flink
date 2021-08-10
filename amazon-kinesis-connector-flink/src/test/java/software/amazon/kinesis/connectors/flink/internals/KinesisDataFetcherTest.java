@@ -35,9 +35,7 @@ import com.amazonaws.services.kinesis.model.Shard;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.powermock.reflect.Whitebox;
 import software.amazon.kinesis.connectors.flink.FlinkKinesisConsumer;
 import software.amazon.kinesis.connectors.flink.KinesisShardAssigner;
@@ -89,9 +87,6 @@ import static org.mockito.Mockito.when;
  * Tests for the {@link KinesisDataFetcher}.
  */
 public class KinesisDataFetcherTest extends TestLogger {
-
-	@Rule
-	public ExpectedException thrown = ExpectedException.none();
 
 	@Test
 	public void testIsRunning() {

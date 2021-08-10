@@ -571,8 +571,7 @@ public class KinesisDataFetcher<T> {
 								streamShardHandle,
 								subscribedShardsState.get(seededStateIndex).getLastProcessedSequenceNum(),
 								registerShardMetricGroup(
-										consumerMetricGroup,
-										subscribedShardsState.get(seededStateIndex)),
+										consumerMetricGroup, subscribedShardsState.get(seededStateIndex)),
 								shardDeserializationSchema));
 			}
 		}
@@ -1223,14 +1222,14 @@ public class KinesisDataFetcher<T> {
 	 *
 	 * @return a {@link MetricGroup} that can be used to update metric values
 	 */
-	private static MetricGroup registerShardMetricGroup(final MetricGroup metricGroup, final KinesisStreamShardState shardState) {
-			return metricGroup
-					.addGroup(
-							KinesisConsumerMetricConstants.STREAM_METRICS_GROUP,
-							shardState.getStreamShardHandle().getStreamName())
-					.addGroup(
-							KinesisConsumerMetricConstants.SHARD_METRICS_GROUP,
-							shardState.getStreamShardHandle().getShard().getShardId());
+	private MetricGroup registerShardMetricGroup(final MetricGroup metricGroup, final KinesisStreamShardState shardState) {
+		return metricGroup
+				.addGroup(
+						KinesisConsumerMetricConstants.STREAM_METRICS_GROUP,
+						shardState.getStreamShardHandle().getStreamName())
+				.addGroup(
+						KinesisConsumerMetricConstants.SHARD_METRICS_GROUP,
+						shardState.getStreamShardHandle().getShard().getShardId());
 	}
 
 	// ------------------------------------------------------------------------

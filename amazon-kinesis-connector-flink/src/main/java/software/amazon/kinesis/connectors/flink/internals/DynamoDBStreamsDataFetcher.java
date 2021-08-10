@@ -107,8 +107,7 @@ public class DynamoDBStreamsDataFetcher<T> extends KinesisDataFetcher<T> {
 	@Override
 	protected RecordPublisher createRecordPublisher(
 				SequenceNumber sequenceNumber,
-				Properties configProps,
-				MetricGroup metricGroup,
+				Properties configProps, MetricGroup metricGroup,
 				StreamShardHandle subscribedShard) throws InterruptedException {
 		StartingPosition startingPosition = StartingPosition.continueFromSequenceNumber(sequenceNumber);
 		return recordPublisherFactory.create(startingPosition, getConsumerConfiguration(), metricGroup, subscribedShard);
