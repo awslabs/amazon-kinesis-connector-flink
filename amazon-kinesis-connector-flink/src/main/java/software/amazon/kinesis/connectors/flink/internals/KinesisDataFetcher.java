@@ -23,7 +23,6 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.metrics.MetricGroup;
-import org.apache.flink.runtime.metrics.groups.GenericMetricGroup;
 import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.streaming.api.operators.StreamingRuntimeContext;
@@ -466,7 +465,7 @@ public class KinesisDataFetcher<T> {
 			final Integer subscribedShardStateIndex,
 			final StreamShardHandle subscribedShard,
 			final SequenceNumber lastSequenceNum,
-			final GenericMetricGroup metricGroup,
+			final MetricGroup metricGroup,
 			final KinesisDeserializationSchema<T> shardDeserializer) throws InterruptedException {
 
 		return new ShardConsumer<>(
@@ -495,7 +494,7 @@ public class KinesisDataFetcher<T> {
 	protected RecordPublisher createRecordPublisher(
 			final SequenceNumber sequenceNumber,
 			final Properties configProps,
-			final GenericMetricGroup metricGroup,
+			final MetricGroup metricGroup,
 			final StreamShardHandle subscribedShard) throws InterruptedException {
 
 		StartingPosition startingPosition = AWSUtil.getStartingPosition(sequenceNumber, configProps);
@@ -573,7 +572,7 @@ public class KinesisDataFetcher<T> {
 								subscribedShardsState.get(seededStateIndex).getLastProcessedSequenceNum(),
 								registerShardMetricGroup(
 										consumerMetricGroup,
-										subscribedShardsState.get(seededStateIndex).getStreamShardHandle()),
+										subscribedShardsState.get(seededStateIndex)),
 								shardDeserializationSchema));
 			}
 		}
@@ -681,7 +680,7 @@ public class KinesisDataFetcher<T> {
 								newStateIndex,
 								newShardState.getStreamShardHandle(),
 								newShardState.getLastProcessedSequenceNum(),
-								registerShardMetricGroup(consumerMetricGroup, newShardState.getStreamShardHandle()),
+								registerShardMetricGroup(consumerMetricGroup, newShardState),
 								shardDeserializationSchema));
 			}
 
@@ -1224,19 +1223,14 @@ public class KinesisDataFetcher<T> {
 	 *
 	 * @return a {@link MetricGroup} that can be used to update metric values
 	 */
-	public static GenericMetricGroup registerShardMetricGroup(final MetricGroup metricGroup, final StreamShardHandle shardHandle) {
-		try {
-			return (GenericMetricGroup) metricGroup
+	private static MetricGroup registerShardMetricGroup(final MetricGroup metricGroup, final KinesisStreamShardState shardState) {
+			return metricGroup
 					.addGroup(
 							KinesisConsumerMetricConstants.STREAM_METRICS_GROUP,
-							shardHandle.getStreamName())
+							shardState.getStreamShardHandle().getStreamName())
 					.addGroup(
 							KinesisConsumerMetricConstants.SHARD_METRICS_GROUP,
-							shardHandle.getShard().getShardId());
-		} catch (ClassCastException e) {
-			throw new ClassCastException("MetricGroup provided is not a GenericMetricGroup. Please ensure the" +
-					"environment is providing an OperatorMetricGroup");
-		}
+							shardState.getStreamShardHandle().getShard().getShardId());
 	}
 
 	// ------------------------------------------------------------------------

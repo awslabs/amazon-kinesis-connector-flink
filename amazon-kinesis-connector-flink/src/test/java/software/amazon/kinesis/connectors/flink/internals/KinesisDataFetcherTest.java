@@ -22,7 +22,6 @@ package software.amazon.kinesis.connectors.flink.internals;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.core.testutils.CheckedThread;
-import org.apache.flink.metrics.groups.UnregisteredMetricsGroup;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor;
 import org.apache.flink.streaming.api.watermark.Watermark;
@@ -976,17 +975,6 @@ public class KinesisDataFetcherTest extends TestLogger {
 		fetcher.shutdownFetcher();
 
 		fetcher.awaitTermination();
-	}
-
-	@Test
-	public void testIfMetricGroupIsNotGenericShouldThrowException() throws Exception {
-		thrown.expect(ClassCastException.class);
-		thrown.expectMessage("MetricGroup provided is not a GenericMetricGroup. Please ensure the" +
-				"environment is providing an OperatorMetricGroup");
-
-		KinesisDataFetcher.registerShardMetricGroup(
-				new UnregisteredMetricsGroup(),
-				ShardConsumerTestUtils.getMockStreamShard("fakeStream", 0));
 	}
 
 	private KinesisDataFetcher<String> createTestDataFetcherWithNoShards(

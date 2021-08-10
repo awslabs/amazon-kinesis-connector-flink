@@ -19,7 +19,7 @@
 
 package software.amazon.kinesis.connectors.flink.internals;
 
-import org.apache.flink.runtime.metrics.groups.GenericMetricGroup;
+import org.apache.flink.runtime.metrics.groups.AbstractMetricGroup;
 
 import org.junit.Test;
 import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants;
@@ -68,7 +68,7 @@ public class ShardConsumerTest {
 				500,
 				5,
 				500);
-		GenericMetricGroup metricGroup = createFakeShardConsumerMetricGroup();
+		AbstractMetricGroup metricGroup = createFakeShardConsumerMetricGroup();
 		assertNumberOfMessagesReceivedFromKinesis(
 				500,
 				kinesis,
@@ -190,7 +190,7 @@ public class ShardConsumerTest {
 			final int expectedNumberOfMessages,
 			final KinesisProxyInterface kinesis,
 			final SequenceNumber startingSequenceNumber,
-			final GenericMetricGroup metricGroup) throws Exception {
+			final AbstractMetricGroup metricGroup) throws Exception {
 		return ShardConsumerTestUtils.assertNumberOfMessagesReceivedFromKinesis(
 				expectedNumberOfMessages,
 				new PollingRecordPublisherFactory(config -> kinesis),

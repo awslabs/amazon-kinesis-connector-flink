@@ -20,7 +20,7 @@
 package software.amazon.kinesis.connectors.flink.internals.publisher.fanout;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.runtime.metrics.groups.GenericMetricGroup;
+import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.util.Preconditions;
 
 import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
@@ -73,7 +73,7 @@ public class FanOutRecordPublisherFactory implements RecordPublisherFactory {
 	public FanOutRecordPublisher create(
 			final StartingPosition startingPosition,
 			final Properties consumerConfig,
-			final GenericMetricGroup metricGroup,
+			final MetricGroup metricGroup,
 			final StreamShardHandle streamShardHandle) {
 		Preconditions.checkNotNull(startingPosition);
 		Preconditions.checkNotNull(consumerConfig);

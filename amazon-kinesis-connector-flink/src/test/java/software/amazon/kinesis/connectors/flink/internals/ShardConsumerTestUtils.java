@@ -20,7 +20,7 @@
 package software.amazon.kinesis.connectors.flink.internals;
 
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
-import org.apache.flink.runtime.metrics.groups.GenericMetricGroup;
+import org.apache.flink.runtime.metrics.groups.AbstractMetricGroup;
 import org.apache.flink.runtime.metrics.groups.OperatorMetricGroup;
 import org.apache.flink.runtime.metrics.groups.UnregisteredMetricGroups;
 
@@ -76,7 +76,7 @@ public class ShardConsumerTestUtils {
 			final RecordPublisherFactory recordPublisherFactory,
 			final SequenceNumber startingSequenceNumber,
 			final Properties consumerProperties,
-			final GenericMetricGroup metricGroup) throws InterruptedException {
+			final AbstractMetricGroup metricGroup) throws InterruptedException {
 		return assertNumberOfMessagesReceivedFromKinesis(
 				expectedNumberOfMessages,
 				recordPublisherFactory,
@@ -92,7 +92,7 @@ public class ShardConsumerTestUtils {
 				final SequenceNumber startingSequenceNumber,
 				final Properties consumerProperties,
 				final SequenceNumber expectedLastProcessedSequenceNum,
-				final GenericMetricGroup metricGroup) throws InterruptedException {
+				final AbstractMetricGroup metricGroup) throws InterruptedException {
 		ShardConsumerMetricsReporter shardMetricsReporter = new ShardConsumerMetricsReporter(metricGroup);
 		StreamShardHandle fakeToBeConsumedShard = getMockStreamShard("fakeStream", 0);
 
@@ -173,13 +173,13 @@ public class ShardConsumerTestUtils {
 		return new SequenceNumber("fakeStartingState");
 	}
 
-	public static GenericMetricGroup createFakeShardConsumerMetricGroup(OperatorMetricGroup metricGroup) {
-		return (GenericMetricGroup) metricGroup
+	public static AbstractMetricGroup createFakeShardConsumerMetricGroup(OperatorMetricGroup metricGroup) {
+		return (AbstractMetricGroup) metricGroup
 				.addGroup(KinesisConsumerMetricConstants.STREAM_METRICS_GROUP, "fakeStream")
 				.addGroup(KinesisConsumerMetricConstants.SHARD_METRICS_GROUP, "shardId-000000000000");
 	}
 
-	public static GenericMetricGroup createFakeShardConsumerMetricGroup() {
+	public static AbstractMetricGroup createFakeShardConsumerMetricGroup() {
 		return createFakeShardConsumerMetricGroup(UnregisteredMetricGroups
 				.createUnregisteredOperatorMetricGroup());
 	}

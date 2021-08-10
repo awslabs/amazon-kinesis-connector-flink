@@ -19,7 +19,8 @@
 
 package software.amazon.kinesis.connectors.flink.metrics;
 
-import org.apache.flink.runtime.metrics.groups.GenericMetricGroup;
+import org.apache.flink.metrics.MetricGroup;
+import org.apache.flink.runtime.metrics.groups.AbstractMetricGroup;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -43,7 +44,7 @@ public class ShardConsumerMetricsReporterTest {
 	private ShardConsumerMetricsReporter metricsReporter;
 
 	@Mock
-	private GenericMetricGroup metricGroup;
+	private MetricGroup metricGroup;
 
 	@Before
 	public void setUp() {
@@ -73,7 +74,7 @@ public class ShardConsumerMetricsReporterTest {
 
 	@Test
 	public void testUnregister() {
-		GenericMetricGroup metricGroup = ShardConsumerTestUtils
+		AbstractMetricGroup metricGroup = ShardConsumerTestUtils
 				.createFakeShardConsumerMetricGroup();
 		ShardConsumerMetricsReporter metricsReporter = new ShardConsumerMetricsReporter(metricGroup);
 
