@@ -19,8 +19,6 @@
 
 package software.amazon.kinesis.connectors.flink.internals.publisher.polling;
 
-import org.apache.flink.metrics.MetricGroup;
-
 import org.junit.Test;
 import software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher;
 import software.amazon.kinesis.connectors.flink.model.StartingPosition;
@@ -33,6 +31,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.SHARD_USE_ADAPTIVE_READS;
+import static software.amazon.kinesis.connectors.flink.internals.ShardConsumerTestUtils.createFakeShardConsumerMetricGroup;
 import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber.SENTINEL_LATEST_SEQUENCE_NUM;
 
 /**
@@ -47,7 +46,7 @@ public class PollingRecordPublisherFactoryTest {
 		RecordPublisher recordPublisher = factory.create(
 			StartingPosition.restartFromSequenceNumber(SENTINEL_LATEST_SEQUENCE_NUM.get()),
 			new Properties(),
-			mock(MetricGroup.class),
+			createFakeShardConsumerMetricGroup(),
 			mock(StreamShardHandle.class));
 
 		assertTrue(recordPublisher instanceof PollingRecordPublisher);
@@ -62,7 +61,7 @@ public class PollingRecordPublisherFactoryTest {
 		RecordPublisher recordPublisher = factory.create(
 			StartingPosition.restartFromSequenceNumber(SENTINEL_LATEST_SEQUENCE_NUM.get()),
 			properties,
-			mock(MetricGroup.class),
+			createFakeShardConsumerMetricGroup(),
 			mock(StreamShardHandle.class));
 
 		assertTrue(recordPublisher instanceof PollingRecordPublisher);
