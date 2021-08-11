@@ -18,6 +18,7 @@ package software.amazon.kinesis.connectors.flink.internals;
 
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
+import org.apache.flink.runtime.metrics.groups.OperatorMetricGroup;
 
 import org.junit.Test;
 import software.amazon.kinesis.connectors.flink.model.StreamShardHandle;
@@ -33,6 +34,7 @@ import static java.util.Collections.singletonList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static software.amazon.kinesis.connectors.flink.internals.KinesisDataFetcher.DEFAULT_SHARD_ASSIGNER;
+import static software.amazon.kinesis.connectors.flink.internals.ShardConsumerTestUtils.createFakeShardConsumerMetricGroup;
 import static software.amazon.kinesis.connectors.flink.model.SentinelSequenceNumber.SENTINEL_LATEST_SEQUENCE_NUM;
 
 /**
@@ -59,7 +61,7 @@ public class DynamoDBStreamsDataFetcherTest {
 		fetcher.createRecordPublisher(
 				SENTINEL_LATEST_SEQUENCE_NUM.get(),
 				new Properties(),
-				runtimeContext.getMetricGroup(),
+				createFakeShardConsumerMetricGroup((OperatorMetricGroup) runtimeContext.getMetricGroup()),
 				dummyStreamShardHandle);
 
 		verify(kinesis).getShardIterator(dummyStreamShardHandle, LATEST.toString(), null);

@@ -20,14 +20,17 @@
 package software.amazon.kinesis.connectors.flink.metrics;
 
 import org.apache.flink.metrics.MetricGroup;
+import org.apache.flink.runtime.metrics.groups.AbstractMetricGroup;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import software.amazon.kinesis.connectors.flink.internals.ShardConsumerTestUtils;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -67,5 +70,16 @@ public class ShardConsumerMetricsReporterTest {
 		assertEquals(2, metricsReporter.getMillisBehindLatest());
 		assertEquals(3, metricsReporter.getNumberOfAggregatedRecords());
 		assertEquals(4, metricsReporter.getNumberOfDeaggregatedRecords());
+	}
+
+	@Test
+	public void testUnregister() {
+		AbstractMetricGroup metricGroup = ShardConsumerTestUtils
+				.createFakeShardConsumerMetricGroup();
+		ShardConsumerMetricsReporter metricsReporter = new ShardConsumerMetricsReporter(metricGroup);
+
+		metricsReporter.unregister();
+
+		assertTrue(metricGroup.isClosed());
 	}
 }

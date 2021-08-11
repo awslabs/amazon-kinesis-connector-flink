@@ -21,7 +21,6 @@ package software.amazon.kinesis.connectors.flink.testutils;
 
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.configuration.ConfigConstants;
-import org.apache.flink.metrics.groups.UnregisteredMetricsGroup;
 
 import com.amazonaws.kinesis.agg.AggRecord;
 import com.amazonaws.kinesis.agg.RecordAggregator;
@@ -49,6 +48,7 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.apache.flink.runtime.metrics.groups.UnregisteredMetricGroups.createUnregisteredOperatorMetricGroup;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -147,7 +147,7 @@ public class TestUtils {
 		Mockito.when(mockedRuntimeContext.getUserCodeClassLoader()).thenReturn(
 				Thread.currentThread().getContextClassLoader());
 
-		Mockito.when(mockedRuntimeContext.getMetricGroup()).thenReturn(new UnregisteredMetricsGroup());
+		Mockito.when(mockedRuntimeContext.getMetricGroup()).thenReturn(createUnregisteredOperatorMetricGroup());
 
 		return mockedRuntimeContext;
 	}
