@@ -95,7 +95,7 @@ public class KinesisDataFetcherTest extends TestLogger {
 		assertTrue(fetcher.isRunning());
 	}
 
-	@Test(timeout = 1000)
+	@Test(timeout = 10_000)
 	public void testIsRunningFalseAfterShutDown() throws InterruptedException {
 		KinesisDataFetcher<String> fetcher = createTestDataFetcherWithNoShards(10, 2, "test-stream");
 

@@ -71,6 +71,7 @@ import static software.amazon.awssdk.services.kinesis.model.ShardIteratorType.AT
 import static software.amazon.awssdk.services.kinesis.model.ShardIteratorType.LATEST;
 import static software.amazon.awssdk.services.kinesis.model.ShardIteratorType.TRIM_HORIZON;
 import static software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher.RecordPublisherRunResult.CANCELLED;
+import static software.amazon.kinesis.connectors.flink.internals.publisher.RecordPublisher.RecordPublisherRunResult.INCOMPLETE;
 
 /**
  * Tests for {@link FanOutRecordPublisher}.
@@ -217,15 +218,14 @@ public class FanOutRecordPublisherTest {
 		RecordPublisher recordPublisher = createRecordPublisher(kinesis);
 		TestConsumer consumer = new TestConsumer();
 
-		int count = 0;
-		while (recordPublisher.run(consumer) == RecordPublisher.RecordPublisherRunResult.INCOMPLETE) {
-			if (++count > FakeKinesisFanOutBehavioursFactory.SubscriptionErrorKinesisV2.NUMBER_OF_SUBSCRIPTIONS + 1) {
-				break;
-			}
-		}
+		RecordPublisherRunResult result = recordPublisher.run(consumer);
 
-		// An exception is thrown on the 5th subscription and then the subscription completes on the next
-		Assert.assertEquals(FakeKinesisFanOutBehavioursFactory.SubscriptionErrorKinesisV2.NUMBER_OF_SUBSCRIPTIONS + 1, kinesis.getNumberOfSubscribeToShardInvocations());
+		// An exception is thrown after the 5th record in each subscription, therefore we expect to receive 5 records
+		assertEquals(5, consumer.getRecordBatches().size());
+		assertEquals(1, kinesis.getNumberOfSubscribeToShardInvocations());
+
+		// INCOMPLETE is returned to indicate the shard is not complete
+		assertEquals(INCOMPLETE, result);
 	}
 
 	@Test
