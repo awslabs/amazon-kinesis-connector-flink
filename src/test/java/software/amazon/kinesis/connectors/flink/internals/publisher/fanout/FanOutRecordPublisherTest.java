@@ -253,7 +253,7 @@ public class FanOutRecordPublisherTest {
 	@Test
 	public void testSubscribeToShardFailsWhenMaxRetriesExceeded() throws Exception {
 		thrown.expect(RuntimeException.class);
-		thrown.expectMessage("Maximum reties exceeded for SubscribeToShard. Failed 3 times.");
+		thrown.expectMessage("Maximum retries exceeded for SubscribeToShard. Failed 3 times.");
 
 		Properties efoProperties = createEfoProperties();
 		efoProperties.setProperty(ConsumerConfigConstants.SUBSCRIBE_TO_SHARD_RETRIES, String.valueOf(EXPECTED_SUBSCRIBE_TO_SHARD_RETRIES));

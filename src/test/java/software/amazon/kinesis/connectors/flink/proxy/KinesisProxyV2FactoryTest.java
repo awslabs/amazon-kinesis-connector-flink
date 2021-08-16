@@ -29,6 +29,8 @@ import java.lang.reflect.Field;
 import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static software.amazon.kinesis.connectors.flink.util.AWSUtil.AWS_CLIENT_CONFIG_PREFIX;
 
 /**
@@ -55,6 +57,27 @@ public class KinesisProxyV2FactoryTest {
 		NettyConfiguration nettyConfiguration = getNettyConfiguration(proxy);
 
 		assertEquals(12345, nettyConfiguration.connectTimeoutMillis());
+	}
+
+	@Test
+	public void testClientConfigurationPopulatedTcpKeepAliveDefaults() throws Exception {
+		Properties properties = properties();
+
+		KinesisProxyV2Interface proxy = KinesisProxyV2Factory.createKinesisProxyV2(properties);
+		NettyConfiguration nettyConfiguration = getNettyConfiguration(proxy);
+
+		assertTrue(nettyConfiguration.tcpKeepAlive());
+	}
+
+	@Test
+	public void testClientConfigurationPopulatedTcpKeepAliveFromProperties() throws Exception {
+		Properties properties = properties();
+		properties.setProperty(AWS_CLIENT_CONFIG_PREFIX + "useTcpKeepAlive", "false");
+
+		KinesisProxyV2Interface proxy = KinesisProxyV2Factory.createKinesisProxyV2(properties);
+		NettyConfiguration nettyConfiguration = getNettyConfiguration(proxy);
+
+		assertFalse(nettyConfiguration.tcpKeepAlive());
 	}
 
 	private NettyConfiguration getNettyConfiguration(final KinesisProxyV2Interface kinesis) throws Exception {
