@@ -1,5 +1,12 @@
 # Changelog
 
+## Release 1.3.0 (August 17th 2021)
+* Unregistering metric reporting for closed shards ([pull-request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/45))
+* Backporting changes from v2.2.0 to v1.x
+  * Refactor `requestRecords` to prevent AWS SDK/Netty threads blocking for EFO ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/40))
+  * Optionally populate ClientConfiguration from properties for EFO ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/41))
+  * Increasing read timeout to 6 minutes and enabling TCP keep alive for EFO ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/42))
+
 ## Release 1.2.0 (June 29th 2021)
 * Dependency Updates:
   * AWS SDK v1 from `1.11.844` to `1.12.7` ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/38))
