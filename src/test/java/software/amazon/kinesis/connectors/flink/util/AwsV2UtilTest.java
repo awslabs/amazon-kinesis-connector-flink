@@ -53,12 +53,15 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static software.amazon.awssdk.http.Protocol.HTTP2;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_HTTP_CLIENT_ACQUISITION_TIMEOUT_MILLIS;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_HTTP_CLIENT_READ_TIMEOUT_MILLIS;
 
 /**
  * Tests for {@link AwsV2Util}.
@@ -194,13 +197,50 @@ public class AwsV2UtilTest {
 		AwsV2Util.createHttpClient(clientConfiguration, builder, new Properties());
 
 		verify(builder).build();
-		verify(builder).maxConcurrency(ConsumerConfigConstants.DEFAULT_EFO_HTTP_CLIENT_MAX_CONURRENCY);
+		verify(builder).maxConcurrency(ConsumerConfigConstants.DEFAULT_EFO_HTTP_CLIENT_MAX_CONCURRENCY);
 		verify(builder).connectionTimeout(Duration.ofSeconds(10));
 		verify(builder).writeTimeout(Duration.ofSeconds(50));
 		verify(builder).connectionMaxIdleTime(Duration.ofMinutes(1));
 		verify(builder).useIdleConnectionReaper(true);
 		verify(builder).protocol(HTTP2);
+		verify(builder).readTimeout(Duration.ofMinutes(6));
 		verify(builder, never()).connectionTimeToLive(any());
+	}
+
+	@Test
+	public void testCreateNettyHttpClientReadTimeout() {
+		Properties properties = new Properties();
+		properties.setProperty(EFO_HTTP_CLIENT_READ_TIMEOUT_MILLIS, "1234");
+
+		NettyNioAsyncHttpClient.Builder builder = mockHttpClientBuilder();
+
+		AwsV2Util.createHttpClient(new ClientConfigurationFactory().getConfig(), builder, properties);
+
+		verify(builder).readTimeout(eq(Duration.ofMillis(1234)));
+	}
+
+	@Test
+	public void testCreateNettyHttpAcquisitionTimeout() {
+		Properties properties = new Properties();
+		properties.setProperty(EFO_HTTP_CLIENT_ACQUISITION_TIMEOUT_MILLIS, "5678");
+
+		NettyNioAsyncHttpClient.Builder builder = mockHttpClientBuilder();
+
+		AwsV2Util.createHttpClient(new ClientConfigurationFactory().getConfig(), builder, properties);
+
+		verify(builder).connectionAcquisitionTimeout(eq(Duration.ofMillis(5678)));
+	}
+
+	@Test
+	public void testCreateNettyHttpClientTcpKeepAlive() {
+		ClientConfiguration clientConfiguration = new ClientConfigurationFactory().getConfig();
+		clientConfiguration.setUseTcpKeepAlive(true);
+
+		NettyNioAsyncHttpClient.Builder builder = mockHttpClientBuilder();
+
+		AwsV2Util.createHttpClient(clientConfiguration, builder, new Properties());
+
+		verify(builder).tcpKeepAlive(true);
 	}
 
 	@Test
@@ -351,6 +391,8 @@ public class AwsV2UtilTest {
 		when(builder.connectionAcquisitionTimeout(any())).thenReturn(builder);
 		when(builder.protocol(any())).thenReturn(builder);
 		when(builder.http2Configuration(any(Http2Configuration.class))).thenReturn(builder);
+		when(builder.tcpKeepAlive(anyBoolean())).thenReturn(builder);
+		when(builder.readTimeout(any())).thenReturn(builder);
 
 		return builder;
 	}

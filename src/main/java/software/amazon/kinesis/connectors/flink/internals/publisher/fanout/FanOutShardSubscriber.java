@@ -85,11 +85,13 @@ public class FanOutShardSubscriber {
 	private static final Logger LOG = LoggerFactory.getLogger(FanOutShardSubscriber.class);
 
 	/**
-	 * The maximum capacity of the queue between the network and consumption thread.
-	 * The queue is mainly used to isolate networking from consumption such that errors do not bubble up.
-	 * This queue also acts as a buffer resulting in a record prefetch and reduced latency.
+	 * The maximum capacity of the queue between the network and consumption thread. The queue is
+	 * mainly used to isolate networking from consumption such that errors do not bubble up. This
+	 * queue also acts as a buffer resulting in a record prefetch and reduced latency. Capacity is 2
+	 * to allow 1 pending record batch and leave room for a completion event to avoid any writer
+	 * thread blocking on the queue.
 	 */
-	private static final int QUEUE_CAPACITY = 1;
+	private static final int QUEUE_CAPACITY = 2;
 
 	/**
 	 * If the consumer does not receive a new event within the DEFAULT_QUEUE_TIMEOUT it will backoff and resubscribe.
@@ -320,6 +322,9 @@ public class FanOutShardSubscriber {
 				result = false;
 				break;
 			} else if (subscriptionEvent.isSubscribeToShardEvent()) {
+				// Request for KDS to send the next record batch
+				subscription.requestRecord();
+
 				SubscribeToShardEvent event = subscriptionEvent.getSubscribeToShardEvent();
 				continuationSequenceNumber = event.continuationSequenceNumber();
 				if (!event.records().isEmpty()) {
@@ -379,7 +384,6 @@ public class FanOutShardSubscriber {
 				@Override
 				public void visit(SubscribeToShardEvent event) {
 					enqueueEvent(new SubscriptionNextEvent(event));
-					requestRecord();
 				}
 			});
 		}
