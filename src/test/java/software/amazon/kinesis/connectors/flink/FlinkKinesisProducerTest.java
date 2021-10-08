@@ -22,6 +22,7 @@ package software.amazon.kinesis.connectors.flink;
 
 import org.apache.flink.api.common.serialization.SerializationSchema;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
+import org.apache.flink.api.common.time.Deadline;
 import org.apache.flink.core.testutils.CheckedThread;
 import org.apache.flink.core.testutils.MultiShotLatch;
 import org.apache.flink.runtime.state.FunctionSnapshotContext;
@@ -45,6 +46,7 @@ import software.amazon.kinesis.connectors.flink.serialization.KinesisSerializati
 import software.amazon.kinesis.connectors.flink.testutils.TestUtils;
 
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -278,6 +280,8 @@ public class FlinkKinesisProducerTest {
 	 */
 	@Test(timeout = 10000)
 	public void testBackpressure() throws Throwable {
+		final Deadline deadline = Deadline.fromNow(Duration.ofSeconds(10));
+
 		final DummyFlinkKinesisProducer<String> producer = new DummyFlinkKinesisProducer<>(new SimpleStringSchema());
 		producer.setQueueLimit(1);
 
@@ -296,7 +300,7 @@ public class FlinkKinesisProducerTest {
 			}
 		};
 		msg1.start();
-		msg1.trySync(100);
+		msg1.trySync(deadline.timeLeft().toMillis());
 		assertFalse("Flush triggered before reaching queue limit", msg1.isAlive());
 
 		// consume msg-1 so that queue is empty again

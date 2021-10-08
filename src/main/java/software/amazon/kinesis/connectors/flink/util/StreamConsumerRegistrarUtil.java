@@ -23,7 +23,6 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.VisibleForTesting;
 
 import software.amazon.kinesis.connectors.flink.FlinkKinesisException;
-import software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants;
 import software.amazon.kinesis.connectors.flink.internals.publisher.fanout.FanOutRecordPublisherConfiguration;
 import software.amazon.kinesis.connectors.flink.internals.publisher.fanout.StreamConsumerRegistrar;
 import software.amazon.kinesis.connectors.flink.proxy.FullJitterBackoff;
@@ -33,6 +32,12 @@ import software.amazon.kinesis.connectors.flink.proxy.KinesisProxyV2Interface;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
+
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.EFO_CONSUMER_NAME;
+import static software.amazon.kinesis.connectors.flink.config.ConsumerConfigConstants.efoConsumerArn;
+import static software.amazon.kinesis.connectors.flink.util.AwsV2Util.isEagerEfoRegistrationType;
+import static software.amazon.kinesis.connectors.flink.util.AwsV2Util.isLazyEfoRegistrationType;
+import static software.amazon.kinesis.connectors.flink.util.AwsV2Util.isUsingEfoRecordPublisher;
 
 /**
  * A utility class that creates instances of {@link StreamConsumerRegistrar} and handles batch operations.
@@ -47,7 +52,7 @@ public class StreamConsumerRegistrarUtil {
 	 * @param streams the stream to register consumers against
 	 */
 	public static void eagerlyRegisterStreamConsumers(final Properties configProps, final List<String> streams) {
-		if (!AwsV2Util.isUsingEfoRecordPublisher(configProps) || !AwsV2Util.isEagerEfoRegistrationType(configProps)) {
+		if (!isUsingEfoRecordPublisher(configProps) || !isEagerEfoRegistrationType(configProps)) {
 			return;
 		}
 
@@ -61,7 +66,7 @@ public class StreamConsumerRegistrarUtil {
 	 * @param streams the stream to register consumers against
 	 */
 	public static void lazilyRegisterStreamConsumers(final Properties configProps, final List<String> streams) {
-		if (!AwsV2Util.isUsingEfoRecordPublisher(configProps) || !AwsV2Util.isLazyEfoRegistrationType(configProps)) {
+		if (!isUsingEfoRecordPublisher(configProps) || !isLazyEfoRegistrationType(configProps)) {
 			return;
 		}
 
@@ -69,23 +74,24 @@ public class StreamConsumerRegistrarUtil {
 	}
 
 	/**
-	 * Deregisters stream consumers for the given streams if EFO is enabled with EAGER|LAZY registration strategy.
+	 * Deregisters stream consumers for the given streams if EFO is enabled with LAZY registration strategy.
 	 *
 	 * @param configProps the properties to parse configuration from
 	 * @param streams the stream to register consumers against
 	 */
 	public static void deregisterStreamConsumers(final Properties configProps, final List<String> streams) {
-		if (!AwsV2Util.isUsingEfoRecordPublisher(configProps) || AwsV2Util.isNoneEfoRegistrationType(configProps)) {
-			return;
+		if (isConsumerDeregistrationRequired(configProps)) {
+			StreamConsumerRegistrar registrar = createStreamConsumerRegistrar(configProps, streams);
+			try {
+				deregisterStreamConsumers(registrar, configProps, streams);
+			} finally {
+				registrar.close();
+			}
 		}
+	}
 
-		StreamConsumerRegistrar registrar = createStreamConsumerRegistrar(configProps, streams);
-
-		try {
-			deregisterStreamConsumers(registrar, configProps, streams);
-		} finally {
-			registrar.close();
-		}
+	private static boolean isConsumerDeregistrationRequired(final Properties configProps) {
+		return isUsingEfoRecordPublisher(configProps) && isLazyEfoRegistrationType(configProps);
 	}
 
 	private static void registerStreamConsumers(final Properties configProps, final List<String> streams) {
@@ -103,12 +109,12 @@ public class StreamConsumerRegistrarUtil {
 			final StreamConsumerRegistrar registrar,
 			final Properties configProps,
 			final List<String> streams) {
-		String streamConsumerName = configProps.getProperty(ConsumerConfigConstants.EFO_CONSUMER_NAME);
+		String streamConsumerName = configProps.getProperty(EFO_CONSUMER_NAME);
 
 		for (String stream : streams) {
 			try {
 				String streamConsumerArn = registrar.registerStreamConsumer(stream, streamConsumerName);
-				configProps.setProperty(ConsumerConfigConstants.efoConsumerArn(stream), streamConsumerArn);
+				configProps.setProperty(efoConsumerArn(stream), streamConsumerArn);
 			} catch (ExecutionException ex) {
 				throw new FlinkKinesisStreamConsumerRegistrarException("Error registering stream: " + stream, ex);
 			} catch (InterruptedException ex) {
@@ -123,18 +129,16 @@ public class StreamConsumerRegistrarUtil {
 			final StreamConsumerRegistrar registrar,
 			final Properties configProps,
 			final List<String> streams) {
-		if (!AwsV2Util.isUsingEfoRecordPublisher(configProps) || AwsV2Util.isNoneEfoRegistrationType(configProps)) {
-			return;
-		}
-
-		for (String stream : streams) {
-			try {
-				registrar.deregisterStreamConsumer(stream);
-			} catch (ExecutionException ex) {
-				throw new FlinkKinesisStreamConsumerRegistrarException("Error deregistering stream: " + stream, ex);
-			} catch (InterruptedException ex) {
-				Thread.currentThread().interrupt();
-				throw new FlinkKinesisStreamConsumerRegistrarException("Error registering stream: " + stream, ex);
+		if (isConsumerDeregistrationRequired(configProps)) {
+			for (String stream : streams) {
+				try {
+					registrar.deregisterStreamConsumer(stream);
+				} catch (ExecutionException ex) {
+					throw new FlinkKinesisStreamConsumerRegistrarException("Error deregistering stream: " + stream, ex);
+				} catch (InterruptedException ex) {
+					Thread.currentThread().interrupt();
+					throw new FlinkKinesisStreamConsumerRegistrarException("Error registering stream: " + stream, ex);
+				}
 			}
 		}
 	}
