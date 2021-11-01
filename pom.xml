@@ -34,7 +34,7 @@ under the License.
 
 	<groupId>software.amazon.kinesis</groupId>
 	<artifactId>amazon-kinesis-connector-flink</artifactId>
-	<version>1.4.0-SNAPSHOT</version>
+	<version>1.4.0</version>
 	<name>Amazon Kinesis Connector for Apache Flink</name>
 
 	<properties>
