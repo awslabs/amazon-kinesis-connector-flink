@@ -1,5 +1,8 @@
 # Changelog
 
+## Release 1.4.0 (November 1st 2021)
+* EAGER EFO registration strategy no longer de-registers consumers. ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/49))
+
 ## Release 1.3.0 (August 17th 2021)
 * Unregistering metric reporting for closed shards ([pull-request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/45))
 * Backporting changes from v2.2.0 to v1.x
