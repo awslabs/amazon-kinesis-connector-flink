@@ -1,5 +1,8 @@
 # Changelog
 
+## Release 2.3.1 (January 4th 2022)
+* Update log4j test dependency to 2.17.1 ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/52))
+
 ## Release 2.3.0 (November 1st 2021)
 * EAGER EFO registration strategy no longer de-registers consumers ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/48))
 * Unregistering metric reporting for closed shards ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/43))
