@@ -312,7 +312,7 @@ public class AwsV2Util {
 	}
 
     /**
-     * Returns a STS VPC regional endpoint based on the given region
+     * Returns a STS VPC regional endpoint based on the given region.
      *
      * @param configProps the properties containing the region
      * @return STS VPC regional endpoint

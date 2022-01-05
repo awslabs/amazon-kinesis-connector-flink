@@ -194,7 +194,10 @@ public class AWSUtil {
 			case ASSUME_ROLE:
 				final AWSSecurityTokenService baseCredentials = AWSSecurityTokenServiceClientBuilder.standard()
 						.withCredentials(getCredentialsProvider(configProps, AWSConfigConstants.roleCredentialsProvider(configPrefix)))
-						.withRegion(configProps.getProperty(AWSConfigConstants.AWS_REGION))
+						.withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
+												AwsV2Util.getSTSEndpoint(configProps).toString(),
+												configProps.getProperty(AWSConfigConstants.AWS_REGION))
+						)
 						.build();
 				return new STSAssumeRoleSessionCredentialsProvider.Builder(
 						configProps.getProperty(AWSConfigConstants.roleArn(configPrefix)),
