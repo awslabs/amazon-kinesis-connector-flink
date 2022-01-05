@@ -58,6 +58,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static software.amazon.awssdk.http.Protocol.HTTP2;
@@ -157,7 +158,7 @@ public class AwsV2UtilTest {
 		verify(properties).getProperty(AWSConfigConstants.roleArn(AWS_CREDENTIALS_PROVIDER));
 		verify(properties).getProperty(AWSConfigConstants.roleSessionName(AWS_CREDENTIALS_PROVIDER));
 		verify(properties).getProperty(AWSConfigConstants.externalId(AWS_CREDENTIALS_PROVIDER));
-		verify(properties).getProperty(AWS_REGION);
+		verify(properties, times(2)).getProperty(AWS_REGION);
 	}
 
 	@Test

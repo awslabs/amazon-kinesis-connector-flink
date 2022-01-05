@@ -24,6 +24,7 @@ import org.apache.flink.annotation.VisibleForTesting;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import org.apache.http.client.utils.URIBuilder;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
@@ -50,6 +51,7 @@ import software.amazon.kinesis.connectors.flink.config.AWSConfigConstants;
 import software.amazon.kinesis.connectors.flink.config.AWSConfigConstants.CredentialProvider;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Optional;
@@ -255,6 +257,7 @@ public class AwsV2Util {
 				.builder()
 				.credentialsProvider(getCredentialsProvider(configProps, AWSConfigConstants.roleCredentialsProvider(configPrefix)))
 				.region(getRegion(configProps))
+				.endpointOverride(getSTSEndpoint(configProps))
 				.build())
 			.build();
 	}
@@ -308,4 +311,19 @@ public class AwsV2Util {
 		return NONE.name().equals(properties.get(EFO_REGISTRATION_TYPE));
 	}
 
+    /**
+     * Creates a {@link Region} object from the given Properties.
+     *
+     * @param configProps the properties containing the region
+     * @return the region specified by the properties
+     */
+	public static URI getSTSEndpoint(final Properties configProps) {
+		String endpoint = StsClient.serviceMetadata().endpointFor(getRegion(configProps)).toString();
+		try {
+			return new URIBuilder().setScheme("https").setHost(endpoint).setPort(443).build();
+		} catch (URISyntaxException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
 }
