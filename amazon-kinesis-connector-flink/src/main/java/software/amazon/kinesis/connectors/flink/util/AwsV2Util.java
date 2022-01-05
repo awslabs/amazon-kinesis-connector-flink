@@ -312,10 +312,10 @@ public class AwsV2Util {
 	}
 
     /**
-     * Creates a {@link Region} object from the given Properties.
+     * Returns a STS VPC regional endpoint based on the given region
      *
      * @param configProps the properties containing the region
-     * @return the region specified by the properties
+     * @return STS VPC regional endpoint
      */
 	public static URI getSTSEndpoint(final Properties configProps) {
 		String endpoint = StsClient.serviceMetadata().endpointFor(getRegion(configProps)).toString();
