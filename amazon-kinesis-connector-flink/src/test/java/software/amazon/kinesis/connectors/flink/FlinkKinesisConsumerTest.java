@@ -28,11 +28,15 @@ import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.OperatorStateStore;
 import org.apache.flink.api.common.time.Deadline;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.typeutils.TupleTypeInfo;
 import org.apache.flink.api.java.typeutils.runtime.PojoSerializer;
+import org.apache.flink.api.java.typeutils.runtime.TupleSerializer;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.mock.Whitebox;
+import org.apache.flink.streaming.util.MockStreamingRuntimeContext;
 import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.runtime.state.StateInitializationContext;
 import org.apache.flink.runtime.state.StateSnapshotContextSynchronousImpl;
@@ -44,6 +48,7 @@ import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.util.AbstractStreamOperatorTestHarness;
 import org.apache.flink.streaming.util.CollectingSourceContext;
+import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.TestLogger;
 
 import com.amazonaws.services.kinesis.model.HashKeyRange;
@@ -142,9 +147,7 @@ public class FlinkKinesisConsumerTest extends TestLogger {
 		}
 
 		FlinkKinesisConsumer<String> consumer = new FlinkKinesisConsumer<>("fakeStream", new SimpleStringSchema(), config);
-		RuntimeContext context = mock(RuntimeContext.class);
-		when(context.getIndexOfThisSubtask()).thenReturn(0);
-		when(context.getNumberOfParallelSubtasks()).thenReturn(2);
+		RuntimeContext context = new MockStreamingRuntimeContext(true, 2, 0);
 		consumer.setRuntimeContext(context);
 
 		OperatorStateStore operatorStateStore = mock(OperatorStateStore.class);
@@ -233,8 +236,7 @@ public class FlinkKinesisConsumerTest extends TestLogger {
 		FlinkKinesisConsumer<String> consumer = new FlinkKinesisConsumer<>("fakeStream", new SimpleStringSchema(), config);
 		FlinkKinesisConsumer<?> mockedConsumer = spy(consumer);
 
-		RuntimeContext context = mock(RuntimeContext.class);
-		when(context.getIndexOfThisSubtask()).thenReturn(1);
+		RuntimeContext context = new MockStreamingRuntimeContext(true, 1, 1);
 
 		mockedConsumer.setRuntimeContext(context);
 		mockedConsumer.initializeState(initializationContext);
@@ -259,6 +261,41 @@ public class FlinkKinesisConsumerTest extends TestLogger {
 			}
 			assertEquals(true, hasOneIsSame);
 		}
+	}
+
+	/**
+	 * Before using an explicit TypeSerializer for the state the {@link FlinkKinesisConsumer}
+	 * was creating a serializer implicitly using a {@link TypeInformation}. After fixing issue FLINK-24943,
+	 * serializer is created explicitly. Here, we verify that previous approach is compatible with the new one.
+	 */
+	@Test
+	public void testExplicitStateSerializerCompatibility() throws Exception {
+		ExecutionConfig executionConfig = new ExecutionConfig();
+
+		Tuple2<StreamShardMetadata, SequenceNumber> tuple =
+				new Tuple2<>(KinesisDataFetcher.convertToStreamShardMetadata(
+						new StreamShardHandle("fakeStream", new Shard().withShardId(KinesisShardIdGenerator.generateFromShardOrder(0)))),
+						new SequenceNumber("1"));
+
+		// This is how serializer was created implicitly using a TypeInformation and since SequenceNumber is GenericType, Flink falls back to Kryo
+		TypeInformation<Tuple2<StreamShardMetadata, SequenceNumber>> originalShardsStateTypeInfo = new TupleTypeInfo<>(
+				TypeInformation.of(StreamShardMetadata.class),
+				TypeInformation.of(SequenceNumber.class));
+		TypeSerializer<Tuple2<StreamShardMetadata, SequenceNumber>> serializerFromTypeInfo =
+				originalShardsStateTypeInfo.createSerializer(executionConfig);
+		byte[] bytes = InstantiationUtil.serializeToByteArray(serializerFromTypeInfo, tuple);
+
+		// This is how we create serializer explicitly with Kryo
+		TupleSerializer<Tuple2<StreamShardMetadata, SequenceNumber>> serializerFromKryo =
+				FlinkKinesisConsumer.createStateSerializer(executionConfig);
+
+		Tuple2<StreamShardMetadata, SequenceNumber> actualTuple =
+				InstantiationUtil.deserializeFromByteArray(serializerFromKryo, bytes);
+
+		// Both ways should be the same
+		Assert.assertEquals(
+				"Explicit serializer is not compatible with implicit method of creating serializer using TypeInformation.",
+				tuple, actualTuple);
 	}
 
 	// ----------------------------------------------------------------------

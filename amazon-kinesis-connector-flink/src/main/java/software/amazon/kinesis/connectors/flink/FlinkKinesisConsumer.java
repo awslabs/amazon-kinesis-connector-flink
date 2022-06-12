@@ -27,10 +27,13 @@ import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.ClosureCleaner;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.api.java.typeutils.TupleTypeInfo;
+import org.apache.flink.api.java.typeutils.runtime.TupleSerializer;
+import org.apache.flink.api.java.typeutils.runtime.kryo.KryoSerializer;
 import org.apache.flink.runtime.state.FunctionInitializationContext;
 import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
@@ -396,7 +399,7 @@ public class FlinkKinesisConsumer<T> extends RichParallelSourceFunction<T> imple
 			TypeInformation.of(SequenceNumber.class));
 
 		sequenceNumsStateForCheckpoint = context.getOperatorStateStore().getUnionListState(
-			new ListStateDescriptor<>(sequenceNumsStateStoreName, shardsStateTypeInfo));
+			new ListStateDescriptor<>(sequenceNumsStateStoreName, createStateSerializer(getRuntimeContext().getExecutionConfig())));
 
 		if (context.isRestored()) {
 			if (sequenceNumsToRestore == null) {
@@ -460,6 +463,25 @@ public class FlinkKinesisConsumer<T> extends RichParallelSourceFunction<T> imple
 				}
 			}
 		}
+	}
+
+	/**
+	 * Creates state serializer for kinesis shard sequence number.
+	 * Using of the explicit state serializer with KryoSerializer is needed because otherwise
+	 * users cannot use 'disableGenericTypes' properties with KinesisConsumer, see FLINK-24943 for details
+	 *
+	 * @return state serializer
+	 */
+	@VisibleForTesting
+	static TupleSerializer<Tuple2<StreamShardMetadata, SequenceNumber>> createStateSerializer(ExecutionConfig executionConfig) {
+		// explicit serializer will keep the compatibility with GenericTypeInformation and allow to disableGenericTypes for users
+		TypeSerializer<?>[] fieldSerializers = new TypeSerializer<?>[] {
+				TypeInformation.of(StreamShardMetadata.class).createSerializer(executionConfig),
+				new KryoSerializer<>(SequenceNumber.class, executionConfig)
+		};
+		@SuppressWarnings("unchecked")
+		Class<Tuple2<StreamShardMetadata, SequenceNumber>> tupleClass = (Class<Tuple2<StreamShardMetadata, SequenceNumber>>) (Class<?>) Tuple2.class;
+		return new TupleSerializer<>(tupleClass, fieldSerializers);
 	}
 
 	/** This method is exposed for tests that need to mock the KinesisDataFetcher in the consumer. */

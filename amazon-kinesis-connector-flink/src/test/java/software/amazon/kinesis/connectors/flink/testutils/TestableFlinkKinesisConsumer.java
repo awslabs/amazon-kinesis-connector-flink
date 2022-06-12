@@ -21,10 +21,7 @@ package software.amazon.kinesis.connectors.flink.testutils;
 
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
-
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
+import org.apache.flink.streaming.util.MockStreamingRuntimeContext;
 import software.amazon.kinesis.connectors.flink.FlinkKinesisConsumer;
 
 import java.util.Properties;
@@ -42,21 +39,7 @@ public class TestableFlinkKinesisConsumer extends FlinkKinesisConsumer<String> {
 										final int indexOfThisConsumerSubtask) {
 		super(fakeStream, new SimpleStringSchema(), fakeConfiguration);
 
-		this.mockedRuntimeCtx = Mockito.mock(RuntimeContext.class);
-
-		Mockito.when(mockedRuntimeCtx.getNumberOfParallelSubtasks()).thenAnswer(new Answer<Integer>() {
-			@Override
-			public Integer answer(InvocationOnMock invocationOnMock) throws Throwable {
-				return totalNumOfConsumerSubtasks;
-			}
-		});
-
-		Mockito.when(mockedRuntimeCtx.getIndexOfThisSubtask()).thenAnswer(new Answer<Integer>() {
-			@Override
-			public Integer answer(InvocationOnMock invocationOnMock) throws Throwable {
-				return indexOfThisConsumerSubtask;
-			}
-		});
+		this.mockedRuntimeCtx = new MockStreamingRuntimeContext(true, totalNumOfConsumerSubtasks, indexOfThisConsumerSubtask);
 	}
 
 	@Override
