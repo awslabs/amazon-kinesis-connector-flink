@@ -78,6 +78,7 @@ import software.amazon.kinesis.connectors.flink.testutils.TestUtils;
 import software.amazon.kinesis.connectors.flink.testutils.TestableFlinkKinesisConsumer;
 import software.amazon.kinesis.connectors.flink.util.KinesisConfigUtil;
 import software.amazon.kinesis.connectors.flink.util.RecordEmitter;
+import software.amazon.kinesis.connectors.flink.util.KinesisStateUtil;
 import software.amazon.kinesis.connectors.flink.util.WatermarkTracker;
 
 import java.io.Serializable;
@@ -287,7 +288,7 @@ public class FlinkKinesisConsumerTest extends TestLogger {
 
 		// This is how we create serializer explicitly with Kryo
 		TupleSerializer<Tuple2<StreamShardMetadata, SequenceNumber>> serializerFromKryo =
-				FlinkKinesisConsumer.createStateSerializer(executionConfig);
+				KinesisStateUtil.createShardsStateSerializer(executionConfig);
 
 		Tuple2<StreamShardMetadata, SequenceNumber> actualTuple =
 				InstantiationUtil.deserializeFromByteArray(serializerFromKryo, bytes);
