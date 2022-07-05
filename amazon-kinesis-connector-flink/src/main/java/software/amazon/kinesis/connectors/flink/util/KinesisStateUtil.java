@@ -5,7 +5,7 @@
  *  You may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *	  http://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,6 +22,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.runtime.TupleSerializer;
 import org.apache.flink.api.java.typeutils.runtime.kryo.KryoSerializer;
+
 import software.amazon.kinesis.connectors.flink.model.SequenceNumber;
 import software.amazon.kinesis.connectors.flink.model.StreamShardMetadata;
 
@@ -30,26 +31,27 @@ import software.amazon.kinesis.connectors.flink.model.StreamShardMetadata;
  */
 public class KinesisStateUtil {
 
-    /**
-     * To prevent instantiation of class
-     */
-    private KinesisStateUtil() {}
+	/**
+	 * To prevent instantiation of class.
+	 */
+	private KinesisStateUtil() {
+	}
 
-    /**
-     * Creates state serializer for kinesis shard sequence number.
-     * Using of the explicit state serializer with KryoSerializer is needed because otherwise
-     * users cannot use 'disableGenericTypes' properties with KinesisConsumer, see FLINK-24943 for details
-     *
-     * @return state serializer
-     */
-    public static TupleSerializer<Tuple2<StreamShardMetadata, SequenceNumber>> createShardsStateSerializer(ExecutionConfig executionConfig) {
-        // explicit serializer will keep the compatibility with GenericTypeInformation and allow to disableGenericTypes for users
-        TypeSerializer<?>[] fieldSerializers = new TypeSerializer<?>[] {
-                TypeInformation.of(StreamShardMetadata.class).createSerializer(executionConfig),
-                new KryoSerializer<>(SequenceNumber.class, executionConfig)
-        };
-        @SuppressWarnings("unchecked")
-        Class<Tuple2<StreamShardMetadata, SequenceNumber>> tupleClass = (Class<Tuple2<StreamShardMetadata, SequenceNumber>>) (Class<?>) Tuple2.class;
-        return new TupleSerializer<>(tupleClass, fieldSerializers);
-    }
+	/**
+	 * Creates state serializer for kinesis shard sequence number.
+	 * Using of the explicit state serializer with KryoSerializer is needed because otherwise
+	 * users cannot use 'disableGenericTypes' properties with KinesisConsumer, see FLINK-24943 for details
+	 *
+	 * @return state serializer
+	 */
+	public static TupleSerializer<Tuple2<StreamShardMetadata, SequenceNumber>> createShardsStateSerializer(ExecutionConfig executionConfig) {
+		// explicit serializer will keep the compatibility with GenericTypeInformation and allow to disableGenericTypes for users
+		TypeSerializer<?>[] fieldSerializers = new TypeSerializer<?>[]{
+				TypeInformation.of(StreamShardMetadata.class).createSerializer(executionConfig),
+				new KryoSerializer<>(SequenceNumber.class, executionConfig)
+		};
+		@SuppressWarnings("unchecked")
+		Class<Tuple2<StreamShardMetadata, SequenceNumber>> tupleClass = (Class<Tuple2<StreamShardMetadata, SequenceNumber>>) (Class<?>) Tuple2.class;
+		return new TupleSerializer<>(tupleClass, fieldSerializers);
+	}
 }

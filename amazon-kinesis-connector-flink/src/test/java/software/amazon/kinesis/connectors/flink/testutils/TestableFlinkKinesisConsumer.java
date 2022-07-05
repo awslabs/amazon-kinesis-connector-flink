@@ -22,6 +22,7 @@ package software.amazon.kinesis.connectors.flink.testutils;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.streaming.util.MockStreamingRuntimeContext;
+
 import software.amazon.kinesis.connectors.flink.FlinkKinesisConsumer;
 
 import java.util.Properties;

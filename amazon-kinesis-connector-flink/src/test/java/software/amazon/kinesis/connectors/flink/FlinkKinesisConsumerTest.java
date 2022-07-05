@@ -36,7 +36,6 @@ import org.apache.flink.api.java.typeutils.runtime.TupleSerializer;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.mock.Whitebox;
-import org.apache.flink.streaming.util.MockStreamingRuntimeContext;
 import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.runtime.state.StateInitializationContext;
 import org.apache.flink.runtime.state.StateSnapshotContextSynchronousImpl;
@@ -48,6 +47,7 @@ import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.util.AbstractStreamOperatorTestHarness;
 import org.apache.flink.streaming.util.CollectingSourceContext;
+import org.apache.flink.streaming.util.MockStreamingRuntimeContext;
 import org.apache.flink.util.InstantiationUtil;
 import org.apache.flink.util.TestLogger;
 
@@ -77,8 +77,8 @@ import software.amazon.kinesis.connectors.flink.testutils.KinesisShardIdGenerato
 import software.amazon.kinesis.connectors.flink.testutils.TestUtils;
 import software.amazon.kinesis.connectors.flink.testutils.TestableFlinkKinesisConsumer;
 import software.amazon.kinesis.connectors.flink.util.KinesisConfigUtil;
-import software.amazon.kinesis.connectors.flink.util.RecordEmitter;
 import software.amazon.kinesis.connectors.flink.util.KinesisStateUtil;
+import software.amazon.kinesis.connectors.flink.util.RecordEmitter;
 import software.amazon.kinesis.connectors.flink.util.WatermarkTracker;
 
 import java.io.Serializable;
