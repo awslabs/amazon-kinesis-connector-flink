@@ -39,16 +39,16 @@ under the License.
 	<name>Amazon Kinesis Connector for Apache Flink Parent</name>
 
 	<properties>
-		<aws.sdk.version>1.12.7</aws.sdk.version>
-		<aws.sdkv2.version>2.16.86</aws.sdkv2.version>
-		<aws.kinesis-kcl.version>1.14.0</aws.kinesis-kcl.version>
+		<aws.sdk.version>1.12.276</aws.sdk.version>
+		<aws.sdkv2.version>2.17.247</aws.sdkv2.version>
+		<aws.kinesis-kcl.version>1.14.8</aws.kinesis-kcl.version>
 		<aws.kinesis-kpl.version>0.14.0</aws.kinesis-kpl.version>
 		<aws.dynamodbstreams-kinesis-adapter.version>1.5.3</aws.dynamodbstreams-kinesis-adapter.version>
 		<httpclient.version>4.5.9</httpclient.version>
 		<httpcore.version>4.4.11</httpcore.version>
 		<jaxb.api.version>2.3.1</jaxb.api.version>
 		<flink.version>1.11.2</flink.version>
-		<guava.version>29.0-jre</guava.version>
+		<guava.version>30.0-jre</guava.version>
 		<jackson2.version>2.12.1</jackson2.version>
 		<log4j.version>2.17.1</log4j.version>
 	</properties>
@@ -66,6 +66,21 @@ under the License.
 
 	<dependencyManagement>
 		<dependencies>
+			<dependency>
+				<groupId>com.amazonaws</groupId>
+				<artifactId>aws-java-sdk-bom</artifactId>
+				<version>${aws.sdk.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>software.amazon.awssdk</groupId>
+				<artifactId>bom</artifactId>
+				<version>${aws.sdkv2.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+
 			<dependency>
 				<groupId>org.apache.flink</groupId>
 				<artifactId>flink-test-utils-junit</artifactId>
