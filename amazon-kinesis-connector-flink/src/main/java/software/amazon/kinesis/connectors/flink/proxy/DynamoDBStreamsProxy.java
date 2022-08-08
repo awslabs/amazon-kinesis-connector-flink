@@ -24,8 +24,7 @@ import org.apache.flink.runtime.util.EnvironmentInformation;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.ClientConfigurationFactory;
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.regions.Region;
-import com.amazonaws.regions.Regions;
+import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.services.dynamodbv2.streamsadapter.AmazonDynamoDBStreamsAdapterClient;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.model.DescribeStreamResult;
@@ -94,8 +93,7 @@ public class DynamoDBStreamsProxy extends KinesisProxy {
 		if (configProps.containsKey(AWS_ENDPOINT)) {
 			adapterClient.setEndpoint(configProps.getProperty(AWS_ENDPOINT));
 		} else {
-			adapterClient.setRegion(Region.getRegion(
-					Regions.fromName(configProps.getProperty(AWS_REGION))));
+			adapterClient.setRegion(RegionUtils.getRegion(configProps.getProperty(AWS_REGION)));
 		}
 
 		return adapterClient;
