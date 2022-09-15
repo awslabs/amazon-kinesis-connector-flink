@@ -1,5 +1,22 @@
 # Changelog
 
+## Release 2.4.0 (September 15th 2022)
+* Dependency Updates:
+  * AWS SDK v2 from 2.16.86 to 2.17.247 ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/55))
+  * AWS SDK v1 from 1.12.7 to 1.12.276 ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/55))
+  * Kinesis Consumer Library from 1.14.0 to 1.14.8 ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/55))
+  * Guava from 29.0-jre to 30.0-jre ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/55))
+  * Jackson from `2.12.1` to `2.12.7` ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/59))
+* Relax validation to support new AWS regions without SDK update ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/62))
+
+## Release 1.5.0 (September 15th 2022)
+* Dependency Updates:
+  * AWS SDK v2 from 2.16.86 to 2.17.247 ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/57))
+  * AWS SDK v1 from 1.12.7 to 1.12.276 ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/57))
+  * Kinesis Consumer Library from 1.14.0 to 1.14.8 ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/57))
+  * Guava from 29.0-jre to 30.0-jre ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/57))
+  * Jackson from `2.12.1` to `2.12.7` ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/60))
+
 ## Release 2.3.1 (January 4th 2022)
 * Update log4j test dependency to 2.17.1 ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/52))
 
