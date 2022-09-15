@@ -1,5 +1,13 @@
 # Changelog
 
+## Release 1.5.0 (September 15th 2022)
+* Dependency Updates:
+  * AWS SDK v2 from 2.16.86 to 2.17.247 ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/57))
+  * AWS SDK v1 from 1.12.7 to 1.12.276 ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/57))
+  * Kinesis Consumer Library from 1.14.0 to 1.14.8 ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/57))
+  * Guava from 29.0-jre to 30.0-jre ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/57))
+  * Jackson from `2.12.1` to `2.12.7` ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/60))
+
 ## Release 1.4.0 (November 1st 2021)
 * EAGER EFO registration strategy no longer de-registers consumers. ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/49))
 
