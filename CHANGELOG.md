@@ -1,5 +1,10 @@
 # Changelog
 
+## Release 1.6.0 (October 12th 2022)
+* Dependency Updates:
+  * Jackson from `2.12.7` to `2.13.4`
+* Relax validation to support new AWS regions without SDK update ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/61))
+
 ## Release 1.5.0 (September 15th 2022)
 * Dependency Updates:
   * AWS SDK v2 from 2.16.86 to 2.17.247 ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/57))
