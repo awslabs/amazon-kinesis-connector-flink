@@ -1,5 +1,14 @@
 # Changelog
 
+## Release 2.4.1 (October 31st 2022)
+* Dependency Updates:
+  * Jackson from `2.12.7` to `2.13.4`
+  * Jackson Databind from `2.12.7` to `2.13.4.2`
+
+## Release 1.6.1 (October 31st 2022)
+* Dependency Updates:
+  * Jackson Databind from `2.13.4` to `2.13.4.2`
+
 ## Release 2.4.0 (September 15th 2022)
 * Dependency Updates:
   * AWS SDK v2 from 2.16.86 to 2.17.247 ([pull request](https://github.com/awslabs/amazon-kinesis-connector-flink/pull/55))

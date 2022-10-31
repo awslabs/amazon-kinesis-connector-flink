@@ -22,7 +22,7 @@ Add the following dependency to your project to start using the connector.
 <dependency>
     <groupId>software.amazon.kinesis</groupId>
     <artifactId>amazon-kinesis-connector-flink</artifactId>
-    <version>1.5.0</version>
+    <version>1.6.1</version>
 </dependency>
 ```  
 
@@ -31,7 +31,7 @@ Add the following dependency to your project to start using the connector.
 <dependency>
     <groupId>software.amazon.kinesis</groupId>
     <artifactId>amazon-kinesis-connector-flink</artifactId>
-    <version>2.4.0</version>
+    <version>2.4.1</version>
 </dependency>
 ```  
 
