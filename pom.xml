@@ -50,6 +50,7 @@ under the License.
 		<flink.version>1.11.2</flink.version>
 		<guava.version>30.0-jre</guava.version>
 		<jackson2.version>2.13.4</jackson2.version>
+		<jackson-databind.version>2.13.4.2</jackson-databind.version>
 		<log4j.version>2.17.1</log4j.version>
 	</properties>
 
@@ -95,7 +96,7 @@ under the License.
 			<dependency>
 				<groupId>com.fasterxml.jackson.core</groupId>
 				<artifactId>jackson-databind</artifactId>
-				<version>${jackson2.version}</version>
+				<version>${jackson-databind.version}</version>
 			</dependency>
 			<dependency>
 				<groupId> com.fasterxml.jackson.core</groupId>
