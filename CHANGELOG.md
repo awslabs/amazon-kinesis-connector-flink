@@ -1,5 +1,9 @@
 # Changelog
 
+## Release 1.6.1 (October 31st 2022)
+* Dependency Updates:
+  * Jackson from `2.13.4` to `2.13.4.2`
+
 ## Release 1.6.0 (October 12th 2022)
 * Dependency Updates:
   * Jackson from `2.12.7` to `2.13.4`

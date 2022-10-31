@@ -17,7 +17,7 @@ Add the following dependency to your project to start using the connector.
 <dependency>
     <groupId>software.amazon.kinesis</groupId>
     <artifactId>amazon-kinesis-connector-flink</artifactId>
-    <version>1.6.0</version>
+    <version>1.6.1</version>
 </dependency>
 ```  
 
