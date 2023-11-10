@@ -21,6 +21,7 @@ package software.amazon.kinesis.connectors.flink;
 
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.api.common.serialization.RuntimeContextInitializationContextAdapters;
 import org.apache.flink.api.common.serialization.SerializationSchema;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.metrics.Counter;
@@ -215,7 +216,10 @@ public class FlinkKinesisProducer<OUT> extends RichSinkFunction<OUT> implements 
 	public void open(Configuration parameters) throws Exception {
 		super.open(parameters);
 
-		schema.open(() -> getRuntimeContext().getMetricGroup().addGroup("user"));
+		schema.open(RuntimeContextInitializationContextAdapters.serializationAdapter(
+				getRuntimeContext(),
+				metricGroup -> metricGroup.addGroup("user")
+		));
 
 		// check and pass the configuration properties
 		KinesisProducerConfiguration producerConfig = KinesisConfigUtil.getValidatedProducerConfiguration(configProps);
