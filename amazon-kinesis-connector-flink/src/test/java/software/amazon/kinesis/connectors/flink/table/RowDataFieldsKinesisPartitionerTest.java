@@ -45,8 +45,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
+import static org.apache.flink.core.testutils.FlinkMatchers.containsCause;
 import static org.apache.flink.table.utils.EncodingUtils.repeat;
-import static org.apache.flink.util.CoreMatchers.containsCause;
 import static org.junit.Assert.assertEquals;
 import static software.amazon.kinesis.connectors.flink.table.RowDataFieldsKinesisPartitioner.MAX_PARTITION_KEY_LENGTH;
 
