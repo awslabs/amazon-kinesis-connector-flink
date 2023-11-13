@@ -20,24 +20,24 @@
 
 package software.amazon.kinesis.connectors.flink.table;
 
-import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.table.api.DataTypes;
-import org.apache.flink.table.api.TableColumn;
-import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.ValidationException;
-import org.apache.flink.table.catalog.CatalogTable;
-import org.apache.flink.table.catalog.CatalogTableImpl;
-import org.apache.flink.table.catalog.ObjectIdentifier;
+import org.apache.flink.table.catalog.Column;
+import org.apache.flink.table.catalog.ResolvedSchema;
+import org.apache.flink.table.catalog.WatermarkSpec;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
 import org.apache.flink.table.connector.sink.SinkFunctionProvider;
 import org.apache.flink.table.connector.source.ScanTableSource;
 import org.apache.flink.table.connector.source.SourceFunctionProvider;
 import org.apache.flink.table.data.RowData;
-import org.apache.flink.table.factories.FactoryUtil;
+import org.apache.flink.table.expressions.utils.ResolvedExpressionMock;
+import org.apache.flink.table.factories.TestFormatFactory;
 import org.apache.flink.table.runtime.connector.sink.SinkRuntimeProviderContext;
 import org.apache.flink.table.runtime.connector.source.ScanRuntimeProviderContext;
+import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.util.TestLogger;
 
 import org.junit.Rule;
@@ -47,7 +47,6 @@ import software.amazon.kinesis.connectors.flink.FlinkKinesisConsumer;
 import software.amazon.kinesis.connectors.flink.FlinkKinesisProducer;
 import software.amazon.kinesis.connectors.flink.RandomKinesisPartitioner;
 import software.amazon.kinesis.connectors.flink.testutils.TableOptionsBuilder;
-import software.amazon.kinesis.connectors.flink.testutils.TestFormatFactory;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -55,7 +54,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import static org.apache.flink.util.CoreMatchers.containsCause;
+import static org.apache.flink.core.testutils.FlinkMatchers.containsCause;
+import static org.apache.flink.table.factories.utils.FactoryMocks.createTableSink;
+import static org.apache.flink.table.factories.utils.FactoryMocks.createTableSource;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
@@ -68,8 +69,6 @@ public class KinesisDynamicTableFactoryTest extends TestLogger {
 
 	private static final String STREAM_NAME = "myStream";
 
-	private static final String TABLE_NAME = "myTable";
-
 	@Rule
 	public ExpectedException thrown = ExpectedException.none();
 
@@ -79,12 +78,12 @@ public class KinesisDynamicTableFactoryTest extends TestLogger {
 
 	@Test
 	public void testGoodTableSource() {
-		TableSchema sourceSchema = defaultSourceSchema().build();
+		ResolvedSchema sourceSchema = defaultSourceSchema();
 		Map<String, String> sourceOptions = defaultTableOptions().build();
-		CatalogTable catalogTable = createSourceTable(sourceSchema, sourceOptions);
 
 		// Construct actual DynamicTableSource using FactoryUtil
-		KinesisDynamicSource actualSource = actualDynamicSource(catalogTable);
+		KinesisDynamicSource actualSource =
+			(KinesisDynamicSource) createTableSource(sourceSchema, sourceOptions);
 
 		// Construct expected DynamicTableSink using factory under test
 		KinesisDynamicSource expectedSource = new KinesisDynamicSource(
@@ -109,21 +108,23 @@ public class KinesisDynamicTableFactoryTest extends TestLogger {
 
 	@Test
 	public void testGoodTableSinkForPartitionedTable() {
-		TableSchema sinkSchema = defaultSinkSchema().build();
+		ResolvedSchema sinkSchema = defaultSinkSchema();
+		DataType physicalDataType = sinkSchema.toPhysicalRowDataType();
 		Map<String, String> sinkOptions = defaultTableOptions().build();
 		List<String> sinkPartitionKeys = Arrays.asList("name", "curr_id");
-		CatalogTable sinkTable = createSinkTable(sinkSchema, sinkOptions, sinkPartitionKeys);
 
 		// Construct actual DynamicTableSink using FactoryUtil
-		KinesisDynamicSink actualSink = actualDynamicSink(sinkTable);
+		KinesisDynamicSink actualSink =
+			(KinesisDynamicSink) createTableSink(sinkSchema, sinkPartitionKeys, sinkOptions);
 
 		// Construct expected DynamicTableSink using factory under test
 		KinesisDynamicSink expectedSink = new KinesisDynamicSink(
-			sinkSchema.toPhysicalRowDataType(),
+			physicalDataType,
 			STREAM_NAME,
 			defaultProducerProperties(),
 			new TestFormatFactory.EncodingFormatMock(","),
-			new RowDataFieldsKinesisPartitioner(sinkTable));
+			new RowDataFieldsKinesisPartitioner(
+				(RowType) physicalDataType.getLogicalType(), sinkPartitionKeys));
 
 		// verify that the constructed DynamicTableSink is as expected
 		assertEquals(expectedSink, actualSink);
@@ -141,12 +142,12 @@ public class KinesisDynamicTableFactoryTest extends TestLogger {
 
 	@Test
 	public void testGoodTableSinkForNonPartitionedTable() {
-		TableSchema sinkSchema = defaultSinkSchema().build();
+		ResolvedSchema sinkSchema = defaultSinkSchema();
 		Map<String, String> sinkOptions = defaultTableOptions().build();
-		CatalogTable sinkTable = createSinkTable(sinkSchema, sinkOptions);
 
 		// Construct actual DynamicTableSink using FactoryUtil
-		KinesisDynamicSink actualSink = actualDynamicSink(sinkTable);
+		KinesisDynamicSink actualSink =
+			(KinesisDynamicSink) createTableSink(sinkSchema, sinkOptions);
 
 		// Construct expected DynamicTableSink using factory under test
 		KinesisDynamicSink expectedSink = new KinesisDynamicSink(
@@ -176,7 +177,7 @@ public class KinesisDynamicTableFactoryTest extends TestLogger {
 
 	@Test
 	public void testBadTableSinkForCustomPartitionerForPartitionedTable() {
-		TableSchema sinkSchema = defaultSinkSchema().build();
+		ResolvedSchema sinkSchema = defaultSinkSchema();
 		Map<String, String> sinkOptions = defaultTableOptions()
 			.withTableOption(KinesisOptions.SINK_PARTITIONER, "random")
 			.build();
@@ -187,12 +188,7 @@ public class KinesisDynamicTableFactoryTest extends TestLogger {
 			KinesisOptions.SINK_PARTITIONER.key()))));
 
 		try {
-			FactoryUtil.createTableSink(
-				null,
-				ObjectIdentifier.of("default", "default", TABLE_NAME),
-				createSinkTable(sinkSchema, sinkOptions, Arrays.asList("name", "curr_id")),
-				new Configuration(),
-				Thread.currentThread().getContextClassLoader());
+			createTableSink(sinkSchema, Arrays.asList("name", "curr_id"), sinkOptions);
 		} catch (ValidationException e) {
 			throw (ValidationException) e.getCause(); // unpack the causing exception
 		}
@@ -200,7 +196,7 @@ public class KinesisDynamicTableFactoryTest extends TestLogger {
 
 	@Test
 	public void testBadTableSinkForNonExistingPartitionerClass() {
-		TableSchema sinkSchema = defaultSinkSchema().build();
+		ResolvedSchema sinkSchema = defaultSinkSchema();
 		Map<String, String> sinkOptions = defaultTableOptions()
 			.withTableOption(KinesisOptions.SINK_PARTITIONER, "abc")
 			.build();
@@ -209,58 +205,35 @@ public class KinesisDynamicTableFactoryTest extends TestLogger {
 		thrown.expect(containsCause(new ValidationException(
 			"Could not find and instantiate partitioner class 'abc'")));
 
-		FactoryUtil.createTableSink(
-			null,
-			ObjectIdentifier.of("default", "default", TABLE_NAME),
-			createSinkTable(sinkSchema, sinkOptions, Collections.emptyList()),
-			new Configuration(),
-			Thread.currentThread().getContextClassLoader());
+		createTableSink(sinkSchema, sinkOptions);
 	}
 
 	// --------------------------------------------------------------------------------------------
 	// Utilities
 	// --------------------------------------------------------------------------------------------
 
-	private CatalogTable createSourceTable(
-		TableSchema sourceSchema,
-		Map<String, String> sourceOptions) {
-		return createSourceTable(sourceSchema, sourceOptions, Collections.emptyList());
+	private ResolvedSchema defaultSourceSchema() {
+		return new ResolvedSchema(
+				Arrays.asList(
+						Column.physical("name", DataTypes.STRING()),
+						Column.physical("curr_id", DataTypes.BIGINT()),
+						Column.physical("time", DataTypes.TIMESTAMP(3)),
+						Column.computed(
+								"next_id",
+								ResolvedExpressionMock.of(DataTypes.BIGINT(), "curr_id + 1"))),
+				Collections.singletonList(
+						WatermarkSpec.of(
+								"time",
+								ResolvedExpressionMock.of(
+										DataTypes.TIMESTAMP(3), "time - INTERVAL '5' SECOND"))),
+				null);
 	}
 
-	private CatalogTable createSourceTable(
-		TableSchema sourceSchema,
-		Map<String, String> sourceOptions,
-		List<String> partitionKeys) {
-		return new CatalogTableImpl(sourceSchema, partitionKeys, sourceOptions, TABLE_NAME);
-	}
-
-	private CatalogTable createSinkTable(
-		TableSchema sinkSchema,
-		Map<String, String> sinkOptions) {
-		return createSinkTable(sinkSchema, sinkOptions, Collections.emptyList());
-	}
-
-	private CatalogTable createSinkTable(
-		TableSchema sinkSchema,
-		Map<String, String> sinkOptions,
-		List<String> partitionKeys) {
-		return new CatalogTableImpl(sinkSchema, partitionKeys, sinkOptions, TABLE_NAME);
-	}
-
-	private TableSchema.Builder defaultSourceSchema() {
-		return TableSchema.builder()
-			.add(TableColumn.of("name", DataTypes.STRING()))
-			.add(TableColumn.of("curr_id", DataTypes.BIGINT()))
-			.add(TableColumn.of("time", DataTypes.TIMESTAMP(3)))
-			.add(TableColumn.of("next_id", DataTypes.BIGINT(), "curr_id + 1"))
-			.watermark("time", "time" + " - INTERVAL '5' SECOND", DataTypes.TIMESTAMP(3));
-	}
-
-	private TableSchema.Builder defaultSinkSchema() {
-		return TableSchema.builder()
-			.add(TableColumn.of("name", DataTypes.STRING()))
-			.add(TableColumn.of("curr_id", DataTypes.BIGINT()))
-			.add(TableColumn.of("time", DataTypes.TIMESTAMP(3)));
+	private ResolvedSchema defaultSinkSchema() {
+		return ResolvedSchema.of(
+				Column.physical("name", DataTypes.STRING()),
+				Column.physical("curr_id", DataTypes.BIGINT()),
+				Column.physical("time", DataTypes.TIMESTAMP(3)));
 	}
 
 	private TableOptionsBuilder defaultTableOptions() {
@@ -302,25 +275,6 @@ public class KinesisDynamicTableFactoryTest extends TestLogger {
 			setProperty("aws.credentials.provider.basic.secretkey", "SuperSecretSecretSquirrel");
 			setProperty("CollectionMaxCount", "100");
 		}};
-	}
-
-	private KinesisDynamicSource actualDynamicSource(CatalogTable catalogTable) {
-		return (KinesisDynamicSource)
-			FactoryUtil.createTableSource(
-				null,
-				ObjectIdentifier.of("default", "default", TABLE_NAME),
-				catalogTable,
-				new Configuration(),
-				Thread.currentThread().getContextClassLoader());
-	}
-
-	private KinesisDynamicSink actualDynamicSink(CatalogTable catalogTable) {
-		return (KinesisDynamicSink) FactoryUtil.createTableSink(
-			null,
-			ObjectIdentifier.of("default", "default", TABLE_NAME),
-			catalogTable,
-			new Configuration(),
-			Thread.currentThread().getContextClassLoader());
 	}
 
 	private <T> T as(Object object, Class<T> clazz) {

@@ -27,6 +27,7 @@ import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.table.api.ValidationException;
 import org.apache.flink.table.catalog.CatalogTable;
+import org.apache.flink.table.catalog.ResolvedCatalogTable;
 import org.apache.flink.table.connector.format.DecodingFormat;
 import org.apache.flink.table.connector.format.EncodingFormat;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
@@ -37,6 +38,8 @@ import org.apache.flink.table.factories.DynamicTableSinkFactory;
 import org.apache.flink.table.factories.DynamicTableSourceFactory;
 import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.flink.table.factories.SerializationFormatFactory;
+import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.types.logical.RowType;
 
 import software.amazon.kinesis.connectors.flink.util.KinesisConfigUtil;
 
@@ -63,7 +66,7 @@ public class KinesisDynamicTableFactory implements
 	public DynamicTableSource createDynamicTableSource(Context context) {
 		FactoryUtil.TableFactoryHelper helper = FactoryUtil.createTableFactoryHelper(this, context);
 		ReadableConfig tableOptions = helper.getOptions();
-		CatalogTable catalogTable = context.getCatalogTable();
+		ResolvedCatalogTable catalogTable = context.getCatalogTable();
 		Properties properties = KinesisOptions.getConsumerProperties(catalogTable.getOptions());
 
 		// initialize the table format early in order to register its consumedOptionKeys
@@ -76,8 +79,10 @@ public class KinesisDynamicTableFactory implements
 		// Validate option values
 		validateConsumerProperties(tableOptions.get(KinesisOptions.STREAM), properties);
 
+		DataType physicalDataType = catalogTable.getResolvedSchema().toPhysicalRowDataType();
+
 		return new KinesisDynamicSource(
-			catalogTable.getSchema().toPhysicalRowDataType(),
+			physicalDataType,
 			tableOptions.get(KinesisOptions.STREAM),
 			properties,
 			decodingFormat
@@ -92,7 +97,7 @@ public class KinesisDynamicTableFactory implements
 	public DynamicTableSink createDynamicTableSink(Context context) {
 		FactoryUtil.TableFactoryHelper helper = FactoryUtil.createTableFactoryHelper(this, context);
 		ReadableConfig tableOptions = helper.getOptions();
-		CatalogTable catalogTable = context.getCatalogTable();
+		ResolvedCatalogTable catalogTable = context.getCatalogTable();
 		Properties properties = KinesisOptions.getProducerProperties(catalogTable.getOptions());
 
 		// initialize the table format early in order to register its consumedOptionKeys
@@ -106,14 +111,17 @@ public class KinesisDynamicTableFactory implements
 		validateKinesisPartitioner(tableOptions, catalogTable);
 		validateProducerProperties(properties);
 
+		DataType physicalDataType = catalogTable.getResolvedSchema().toPhysicalRowDataType();
+
 		return new KinesisDynamicSink(
-			catalogTable.getSchema().toPhysicalRowDataType(),
+			physicalDataType,
 			tableOptions.get(KinesisOptions.STREAM),
 			properties,
 			encodingFormat,
 			KinesisOptions.getKinesisPartitioner(
 				tableOptions,
-				catalogTable,
+				(RowType) physicalDataType.getLogicalType(),
+				catalogTable.getPartitionKeys(),
 				context.getClassLoader()));
 	}
 
